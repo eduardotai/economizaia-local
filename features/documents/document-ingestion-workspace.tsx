@@ -5,6 +5,8 @@ import { AlertTriangle } from "lucide-react";
 import { DocumentList } from "@/features/documents/document-list";
 import { DocumentUploadPanel } from "@/features/documents/document-upload-panel";
 import { localDb } from "@/db/local-db";
+import { createDocumentStoredAuditEvents } from "@/lib/local-audit";
+import { saveDocumentSnapshot } from "@/lib/local-snapshots";
 import { processDocumentPlaceholder, registerDocumentLocally } from "@/lib/document-pipeline";
 import type { IngestedDocument } from "@/models/documents";
 
@@ -41,6 +43,8 @@ export function DocumentIngestionWorkspace() {
           const registered = await registerDocumentLocally({ file });
           const processed = await processDocumentPlaceholder(registered, file);
           await localDb.saveIngestionDocument(processed);
+          await saveDocumentSnapshot(processed);
+          await Promise.all(createDocumentStoredAuditEvents(processed).map((event) => localDb.appendAuditEvent(event)));
           return processed;
         }),
       );
