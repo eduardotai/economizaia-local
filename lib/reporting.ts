@@ -217,14 +217,18 @@ export function renderReportHtml(report: UserReport) {
           }</ul>
           <h3>Capability do local explainer</h3>
           <ul>
+            <li><strong>Modo:</strong> ${escapeHtml(report.localExplainerCapability?.mode ?? "N/A")}</li>
             <li><strong>Status:</strong> ${escapeHtml(report.localExplainerCapability?.statusLabel ?? "N/A")}</li>
             <li><strong>Provider:</strong> ${escapeHtml(report.localExplainerCapability?.provider ?? "N/A")}</li>
             <li><strong>Disponibilidade:</strong> ${escapeHtml(report.localExplainerCapability?.availability ?? "N/A")}</li>
+            <li><strong>Ativação:</strong> ${escapeHtml(report.localExplainerCapability?.activationLabel ?? "N/A")}</li>
             <li>${escapeHtml(report.localExplainerCapability?.detail ?? "Capability ainda não registrada.")}</li>
           </ul>
+          <p><strong>Privacidade:</strong> chain-of-thought é interno/privado. O contexto explicativo futuro deve vir de RAG local.</p>
           <h3>Resposta local mock</h3>
           <p>${escapeHtml(report.localExplainerResponse?.answer ?? "Nenhuma resposta local gerada.")}</p>
           <p><strong>Disclaimer do explainer:</strong> ${escapeHtml(report.localExplainerResponse?.disclaimer ?? "Sem disclaimer adicional.")}</p>
+          <p><strong>Prompt scaffold:</strong> ${escapeHtml(report.localExplainerResponse?.promptContract.scaffoldPrompt ?? "Não disponível.")}</p>
           <h3>Chat placeholder</h3>
           <ul>${
             report.localExplainerChat?.turns.length
@@ -274,7 +278,7 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
     tags: ["mock", "placeholder", "revisão humana", "rag local"],
   });
 
-  const localExplainerCapability = getLocalExplainerCapability();
+  const localExplainerCapability = getLocalExplainerCapability("light");
   const localExplainerResponse = await explainWithLocalLlm({
     simulation: {
       id: simulation.id,
@@ -282,9 +286,11 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
       audit: simulation.audit,
       currentScenario: simulation.currentScenario,
       status: simulation.status,
+      bundleVersion: simulation.bundleVersion,
     },
     reportId,
     channel: "report",
+    mode: "light",
     explanationContext,
   });
   const localExplainerChat = await createLocalExplainerChatSession({
@@ -294,8 +300,10 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
       audit: simulation.audit,
       currentScenario: simulation.currentScenario,
       status: simulation.status,
+      bundleVersion: simulation.bundleVersion,
     },
     reportId,
+    mode: "light",
   });
 
   const report: UserReport = {

@@ -2,10 +2,12 @@ import type { SimulationResult } from "@/models/domain";
 import type { ExplanationContext, RetrievalStrategy } from "@/rag";
 
 export type LocalExplainerProvider = "mock" | "webllm" | "disabled";
+export type LocalExplainerMode = "light" | "ai";
 
 export type LocalExplainerAvailability =
   | "unavailable"
   | "checking"
+  | "ready_light"
   | "ready_placeholder"
   | "ready"
   | "degraded"
@@ -17,29 +19,47 @@ export type LocalExplainerReasonCode =
   | "MODEL_NOT_DOWNLOADED"
   | "MODEL_LOADING"
   | "PLACEHOLDER_MODE"
+  | "LIGHT_MODE_ONLY"
+  | "USER_ACTION_REQUIRED"
   | "LOCAL_ONLY_DISABLED"
   | "UNKNOWN";
 
+export interface LocalExplainerPromptContract {
+  templateVersion: string;
+  antiHallucinationPolicy: string[];
+  scaffoldPrompt: string;
+  closingRule: string;
+  chainOfThoughtPolicy: "private_internal";
+  ragContextPolicy: "future_local_rag_only";
+  explicitPlaceholder: true;
+}
+
 export interface LocalExplainerCapability {
   provider: LocalExplainerProvider;
+  mode: LocalExplainerMode;
   availability: LocalExplainerAvailability;
   canExplainReport: boolean;
   canExplainChat: boolean;
+  canGenerateOnDemand: boolean;
+  lazyLoadOnly: boolean;
   requiresModelDownload: boolean;
   requiresUserAction: boolean;
   explicitPlaceholder: boolean;
   supportsStreaming: boolean;
+  supportedModes: LocalExplainerMode[];
   supportedStrategies: RetrievalStrategy[];
   primaryReasonCode: LocalExplainerReasonCode;
+  activationLabel: string;
   statusLabel: string;
   detail: string;
   checkedAt: string;
 }
 
 export interface LocalExplainerRequest {
-  simulation: Pick<SimulationResult, "id" | "summary" | "audit" | "currentScenario" | "status">;
+  simulation: Pick<SimulationResult, "id" | "summary" | "audit" | "currentScenario" | "status" | "bundleVersion">;
   reportId?: string;
   channel: "report" | "chat";
+  mode: LocalExplainerMode;
   userPrompt?: string;
   explanationContext?: ExplanationContext;
 }
@@ -56,12 +76,14 @@ export interface LocalExplainerResponse {
   id: string;
   createdAt: string;
   provider: LocalExplainerProvider;
+  mode: LocalExplainerMode;
   availability: LocalExplainerAvailability;
-  status: "completed" | "partial" | "refused";
+  status: "idle" | "completed" | "partial" | "refused";
   title: string;
   summary: string;
   answer: string;
   disclaimer: string;
+  promptContract: LocalExplainerPromptContract;
   evidence: LocalExplainerEvidenceItem[];
   followUps: string[];
   explicitPlaceholder: boolean;
@@ -79,6 +101,7 @@ export interface LocalExplainerChatSession {
   id: string;
   createdAt: string;
   updatedAt: string;
+  mode: LocalExplainerMode;
   capability: LocalExplainerCapability;
   turns: LocalExplainerChatTurn[];
   explicitPlaceholder: true;

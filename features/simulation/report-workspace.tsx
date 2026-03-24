@@ -79,7 +79,7 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
             <CardTitle>Relatório estruturado em pt-BR com exportação local</CardTitle>
             <CardDescription className="leading-6">
               Gera uma versão inicial do relatório do usuário, salva localmente e exporta como HTML pronto para impressão.
-              <strong> PDF segue como placeholder explícito</strong> neste checkpoint.
+              <strong> PDF segue como placeholder explícito</strong> neste checkpoint. O modo padrão é leve, sem IA carregada.
             </CardDescription>
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
@@ -91,7 +91,10 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
         <div className="flex flex-wrap gap-3">
           <Button disabled={!profile || !simulation || isSaving} onClick={() => void handleGenerateReport()}>
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? "Gerando relatório..." : "Gerar e salvar relatório local"}
+            {isSaving ? "Gerando relatório..." : "Gerar e salvar relatório local (modo leve)"}
+          </Button>
+          <Button variant="outline" disabled>
+            <FileText className="mr-2 h-4 w-4" /> Gerar relatório com explicação IA
           </Button>
           <Button
             variant="outline"
@@ -225,13 +228,15 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
             <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
               <div className="font-medium text-white">Capability do local explainer</div>
               <div className="mt-3 space-y-2">
+                <p>Modo: {report.localExplainerCapability?.mode ?? "N/A"}</p>
                 <p>Status: {report.localExplainerCapability?.statusLabel ?? "N/A"}</p>
                 <p>Provider: {report.localExplainerCapability?.provider ?? "N/A"}</p>
                 <p>Disponibilidade: {report.localExplainerCapability?.availability ?? "N/A"}</p>
+                <p>Ativação: {report.localExplainerCapability?.activationLabel ?? "N/A"}</p>
                 <p>{report.localExplainerCapability?.detail ?? "Capability ainda não registrada."}</p>
               </div>
               <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3 text-amber-100">
-                Tudo acima permanece explícito como mock/placeholder até a integração real com WebLLM local.
+                Chain-of-thought é interno/privado. O contexto explicativo futuro virá de RAG local. Tudo acima permanece explícito como mock/placeholder até a integração real com WebLLM local.
               </div>
             </div>
           </div>
@@ -241,6 +246,10 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
               <div className="font-medium text-white">Resposta local do explainer (mock)</div>
               <p className="mt-3 leading-6">{report.localExplainerResponse?.answer ?? "Nenhuma resposta local gerada."}</p>
               <p className="mt-3 text-amber-200">{report.localExplainerResponse?.disclaimer}</p>
+              <div className="mt-3 rounded-2xl border border-border bg-muted/20 p-3">
+                <div className="font-medium text-white">Prompt anti-alucinação do scaffold</div>
+                <div className="mt-2 text-xs leading-6">{report.localExplainerResponse?.promptContract.scaffoldPrompt ?? "Não disponível."}</div>
+              </div>
               <div className="mt-3 space-y-2">
                 {(report.localExplainerResponse?.evidence ?? []).map((item) => (
                   <div key={item.id} className="rounded-2xl border border-border bg-muted/20 p-3">
