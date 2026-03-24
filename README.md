@@ -6,6 +6,16 @@ Starter funcional para um app **Next.js 15 + TypeScript + Tailwind + estilo shad
 
 ## Checkpoint atual
 
+### UI local de inspeção para auditoria e snapshots
+
+Este checkpoint adiciona uma interface simples de inspeção local para reforçar o debug manual e a confiança no fluxo local-first:
+
+- Tela client-side para listar `audit_events` persistidos no navegador
+- Tela client-side para listar `snapshots` locais de perfil, documento e simulação
+- Exibição de metadados úteis como timestamp, tipo, origem, aggregate/entity ids, refs e payload serializado
+- Integração leve com a home atual, sem backend remoto
+- Geração de auditoria e snapshots também no fluxo de simulação local
+
 ### Repositórios locais e auditoria expandida
 
 Este checkpoint reforça a camada de persistência local e a trilha de auditoria, mantendo o projeto explicitamente local-first:
@@ -181,6 +191,7 @@ O que já funciona neste starter:
 - Persistência local básica do onboarding/perfil
 - Workspace de simulação com premissas, confiança, cenários mock, alertas e lacunas
 - Integração do onboarding com o `mock-tax-rule-engine`
+- Painel local de inspeção para auditoria e snapshots persistidos
 - Upload inicial de documentos com processamento placeholder
 - Persistência local de documentos ingeridos e auditoria básica
 - Estrutura de código pronta para expansão local-first

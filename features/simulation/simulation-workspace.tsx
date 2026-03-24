@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { localDb } from "@/db/local-db";
 import { mockTaxRuleEngine } from "@/engine/mock-tax-rule-engine";
+import { createProfileSavedAuditEvent, createSimulationAuditEvents } from "@/lib/local-audit";
+import { saveProfileSnapshot, saveSimulationSnapshot } from "@/lib/local-snapshots";
 import {
   activityTypeLabels,
   createEmptyOnboardingProfile,
@@ -106,15 +108,27 @@ export function SimulationWorkspace() {
 
   async function persistAndSimulate(nextProfile: AnonymousOnboardingProfile) {
     setSaving(true);
-    await localDb.saveAnonymousOnboardingProfile(nextProfile);
 
-    const simulationResult = mockTaxRuleEngine.simulate(onboardingProfileToTaxpayerProfile(nextProfile));
-    await localDb.saveProfile(onboardingProfileToTaxpayerProfile(nextProfile));
-    await localDb.saveSimulation(simulationResult);
+    try {
+      await localDb.saveAnonymousOnboardingProfile(nextProfile);
 
-    setProfile(nextProfile);
-    setSimulation(simulationResult);
-    setSaving(false);
+      const persistedProfile = onboardingProfileToTaxpayerProfile(nextProfile);
+      const simulationResult = mockTaxRuleEngine.simulate(persistedProfile);
+
+      await localDb.saveProfile(persistedProfile);
+      await localDb.saveSimulation(simulationResult);
+      await Promise.all([
+        saveProfileSnapshot(persistedProfile),
+        saveSimulationSnapshot(simulationResult),
+        localDb.appendAuditEvent(createProfileSavedAuditEvent(persistedProfile)),
+        ...createSimulationAuditEvents(simulationResult).map((event) => localDb.appendAuditEvent(event)),
+      ]);
+
+      setProfile(nextProfile);
+      setSimulation(simulationResult);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateProfile<K extends keyof AnonymousOnboardingProfile>(field: K, value: AnonymousOnboardingProfile[K]) {

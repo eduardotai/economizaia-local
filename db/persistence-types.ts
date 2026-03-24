@@ -1,5 +1,6 @@
 import type { IngestedDocument } from "@/models/documents";
 import type { AuditTrailEntry, FiscalDocument, RuleBundle, SimulationResult, TaxpayerProfile } from "@/models/domain";
+import type { PersistedUserReport } from "@/models/report";
 
 export type LocalStoreName =
   | "taxpayer_profiles"
@@ -9,9 +10,10 @@ export type LocalStoreName =
   | "simulation_results"
   | "rule_bundles"
   | "audit_events"
-  | "snapshots";
+  | "snapshots"
+  | "user_reports";
 
-export type PersistedEntityKind = "profile" | "document" | "ingestion_document" | "simulation" | "result" | "bundle" | "audit_event" | "system";
+export type PersistedEntityKind = "profile" | "document" | "ingestion_document" | "simulation" | "result" | "bundle" | "audit_event" | "user_report" | "system";
 
 export interface PersistedRecordMetadata {
   savedAt: string;
@@ -55,6 +57,7 @@ export type SimulationRecord = PersistedRecord<SimulationResult>;
 export type SimulationResultRecord = PersistedRecord<SimulationResult>;
 export type RuleBundleRecord = PersistedRecord<RuleBundle>;
 export type AuditEventRecord = PersistedRecord<LocalAuditEvent>;
+export type UserReportRecord = PersistedRecord<PersistedUserReport>;
 
 export interface LocalPersistenceContract {
   profiles: {
@@ -86,6 +89,12 @@ export interface LocalPersistenceContract {
     save(bundle: RuleBundle): Promise<RuleBundleRecord>;
     get(id: string): Promise<RuleBundleRecord | null>;
     list(): Promise<RuleBundleRecord[]>;
+  };
+  reports: {
+    save(report: PersistedUserReport): Promise<UserReportRecord>;
+    get(id: string): Promise<UserReportRecord | null>;
+    list(): Promise<UserReportRecord[]>;
+    getLatest(): Promise<UserReportRecord | null>;
   };
   audit: {
     append(event: LocalAuditEvent): Promise<AuditEventRecord>;

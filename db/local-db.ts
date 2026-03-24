@@ -2,6 +2,7 @@ import localforage from "localforage";
 import type { IngestedDocument } from "@/models/documents";
 import type { FiscalDocument, RuleBundle, SimulationResult, TaxpayerProfile } from "@/models/domain";
 import type { AnonymousOnboardingProfile } from "@/models/onboarding";
+import type { PersistedUserReport } from "@/models/report";
 import type {
   AuditEventRecord,
   DocumentRecord,
@@ -16,6 +17,7 @@ import type {
   RuleBundleRecord,
   SimulationRecord,
   SimulationResultRecord,
+  UserReportRecord,
 } from "@/db/persistence-types";
 
 const DATABASE_NAME = "economizaia-local";
@@ -27,6 +29,7 @@ const ingestionDocumentStore = localforage.createInstance({ name: DATABASE_NAME,
 const simulationStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "simulations" });
 const resultStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "simulation_results" });
 const bundleStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "rule_bundles" });
+const reportStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "user_reports" });
 const auditStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "audit_events" });
 const snapshotStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "snapshots" });
 const onboardingStore = localforage.createInstance({ name: DATABASE_NAME, storeName: "anonymous_onboarding" });
@@ -173,6 +176,24 @@ const bundlesRepository = {
   list: () => listRecords<RuleBundle>(bundleStore) as Promise<RuleBundleRecord[]>,
 };
 
+const reportsRepository = {
+  save: (report: PersistedUserReport) => saveRecord(reportStore, "user_report", report.report.id, report) as Promise<UserReportRecord>,
+  get: (id: string) => getRecord<PersistedUserReport>(reportStore, id) as Promise<UserReportRecord | null>,
+  list: () =>
+    listRecords<PersistedUserReport>(reportStore, {
+      sortBy: (item) => item.data.report.updatedAt,
+      direction: "desc",
+    }) as Promise<UserReportRecord[]>,
+  getLatest: async () => {
+    const reports = await listRecords<PersistedUserReport>(reportStore, {
+      sortBy: (item) => item.data.report.updatedAt,
+      direction: "desc",
+    });
+
+    return (reports[0] as UserReportRecord | undefined) ?? null;
+  },
+};
+
 const auditRepository = {
   append: (event: LocalAuditEvent) => saveRecord(auditStore, "audit_event", event.id, event) as Promise<AuditEventRecord>,
   list: () =>
@@ -197,6 +218,7 @@ export const repositories: LocalPersistenceContract = {
   simulations: simulationsRepository,
   results: resultsRepository,
   bundles: bundlesRepository,
+  reports: reportsRepository,
   audit: auditRepository,
   snapshots: {
     save: saveSnapshot,
@@ -225,6 +247,10 @@ export const localDb = {
   saveRuleBundle: async (bundle: RuleBundle) => (await bundlesRepository.save(bundle)).data,
   getRuleBundle: async (id: string) => (await bundlesRepository.get(id))?.data ?? null,
   listRuleBundles: async () => (await bundlesRepository.list()).map((record) => record.data),
+  saveUserReport: async (report: PersistedUserReport) => (await reportsRepository.save(report)).data,
+  getUserReport: async (id: string) => (await reportsRepository.get(id))?.data ?? null,
+  listUserReports: async () => (await reportsRepository.list()).map((record) => record.data),
+  getLatestUserReport: async () => (await reportsRepository.getLatest())?.data ?? null,
   appendAuditEvent: async (event: LocalAuditEvent) => (await auditRepository.append(event)).data,
   listAuditEvents: async () => (await auditRepository.list()).map((record) => record.data),
   listAuditEventsByAggregate: async (aggregateId: string) => (await auditRepository.listByAggregate(aggregateId)).map((record) => record.data),

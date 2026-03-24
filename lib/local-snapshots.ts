@@ -1,5 +1,6 @@
 import type { IngestedDocument } from "@/models/documents";
 import type { SimulationResult, TaxpayerProfile } from "@/models/domain";
+import type { PersistedUserReport } from "@/models/report";
 import type { LocalSnapshot } from "@/db/persistence-types";
 import { localDb } from "@/db/local-db";
 import { createId, nowIso } from "@/lib/document-utils";
@@ -27,6 +28,10 @@ export async function saveSimulationSnapshot(result: SimulationResult) {
   return localDb.saveSnapshot(createSnapshot("simulation", result, result.id));
 }
 
+export async function saveReportSnapshot(report: PersistedUserReport) {
+  return localDb.saveSnapshot(createSnapshot("report", report, report.report.id));
+}
+
 export async function getLatestProfileSnapshot(profileId: string) {
   const snapshots = await localDb.listSnapshots<TaxpayerProfile>("profile");
   return snapshots.find((snapshot) => snapshot.entityId === profileId) ?? null;
@@ -40,4 +45,9 @@ export async function getLatestDocumentSnapshot(documentId: string) {
 export async function getLatestSimulationSnapshot(simulationId: string) {
   const snapshots = await localDb.listSnapshots<SimulationResult>("simulation");
   return snapshots.find((snapshot) => snapshot.entityId === simulationId) ?? null;
+}
+
+export async function getLatestReportSnapshot(reportId: string) {
+  const snapshots = await localDb.listSnapshots<PersistedUserReport>("report");
+  return snapshots.find((snapshot) => snapshot.entityId === reportId) ?? null;
 }
