@@ -1,18 +1,29 @@
-import type { FiscalDocument } from "@/models/domain";
+import type { OcrRequest, OcrResult } from "@/lib/document-extraction";
+import { getOcrAdapter } from "@/lib/document-extraction";
 
-export interface OcrResult {
-  text: string;
-  confidence: number;
-  warnings: string[];
-}
+export async function runLocalOcr(request: OcrRequest): Promise<OcrResult> {
+  const adapter = getOcrAdapter(request.document.kind);
 
-export async function runLocalOcr(_document: FiscalDocument): Promise<OcrResult> {
-  return {
-    text: "",
-    confidence: 0,
-    warnings: [
-      "Placeholder: conectar Tesseract.js via worker para OCR local.",
-      "Nenhuma inferência real é executada neste starter base.",
-    ],
-  };
+  if (!adapter) {
+    return {
+      jobs: [],
+      pages: request.pages,
+      warnings: [
+        {
+          code: "UNSUPPORTED_DOCUMENT_KIND",
+          message: `Nao existe adapter OCR local para o tipo ${request.document.kind}.`,
+          recoverable: false,
+        },
+      ],
+      capability: {
+        engine: "unsupported",
+        status: "unavailable",
+        mode: "stub",
+        message: "OCR indisponivel para este formato neste checkpoint.",
+      },
+      suggestedStatus: "failed",
+    };
+  }
+
+  return adapter.run(request);
 }

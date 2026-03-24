@@ -1,4 +1,4 @@
-import { FileText, ImageIcon, FileCode2, AlertCircle, CheckCircle2, ScanSearch } from "lucide-react";
+import { FileText, ImageIcon, FileCode2, AlertCircle, CheckCircle2, ScanSearch, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { formatBytes } from "@/lib/document-utils";
@@ -20,11 +20,23 @@ const statusLabelMap: Record<IngestedDocument["status"], string> = {
   registered: "Registrado",
   classifying: "Classificando",
   extracting_text: "Extraindo texto",
-  ocr_queued: "OCR enfileirado",
+  ocr_queued: "OCR preparado",
   extracting_entities: "Extraindo entidades",
-  completed: "Concluído",
-  review_required: "Revisão necessária",
+  completed: "Concluido",
+  review_required: "Revisao recomendada",
   failed: "Falhou",
+};
+
+const statusToneMap: Record<IngestedDocument["status"], string> = {
+  uploaded: "border-slate-400/20 bg-slate-400/10 text-slate-100",
+  registered: "border-slate-400/20 bg-slate-400/10 text-slate-100",
+  classifying: "border-sky-400/20 bg-sky-400/10 text-sky-100",
+  extracting_text: "border-sky-400/20 bg-sky-400/10 text-sky-100",
+  ocr_queued: "border-amber-400/20 bg-amber-400/10 text-amber-100",
+  extracting_entities: "border-sky-400/20 bg-sky-400/10 text-sky-100",
+  completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+  review_required: "border-amber-400/20 bg-amber-400/10 text-amber-100",
+  failed: "border-red-400/20 bg-red-400/10 text-red-100",
 };
 
 export function DocumentList({ documents }: DocumentListProps) {
@@ -33,14 +45,14 @@ export function DocumentList({ documents }: DocumentListProps) {
       <div className="space-y-2">
         <CardTitle>Arquivos processados localmente</CardTitle>
         <CardDescription>
-          Visualização do pipeline documental com status, entidades mockadas e trilha de auditoria preparada para inspeção local.
+          Pipeline documental local-first com estados visiveis, adapters isolados de extracao/OCR e limites explicitamente marcados.
         </CardDescription>
       </div>
 
       <div className="space-y-4">
         {documents.length === 0 ? (
           <div className="rounded-2xl border border-border/70 bg-background/40 p-5 text-sm text-muted-foreground">
-            Nenhum documento enviado ainda. Faça um upload para iniciar o fluxo esqueleto.
+            Nenhum documento enviado ainda. Faca um upload para iniciar o fluxo local.
           </div>
         ) : (
           documents.map((document) => {
@@ -62,25 +74,40 @@ export function DocumentList({ documents }: DocumentListProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Badge>{statusLabelMap[document.status]}</Badge>
+                      <Badge className={statusToneMap[document.status]}>{statusLabelMap[document.status]}</Badge>
                       <Badge className="border-slate-400/20 bg-slate-400/10 text-slate-200">{document.kind.toUpperCase()}</Badge>
-                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">placeholder</Badge>
+                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">local-first</Badge>
+                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">stub parcial</Badge>
                     </div>
                   </div>
 
                   <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3 lg:min-w-[360px]">
-                    <StatusMetric label="Páginas" value={String(document.pages.length)} icon={<FileText className="h-4 w-4" />} />
+                    <StatusMetric label="Paginas" value={String(document.pages.length)} icon={<FileText className="h-4 w-4" />} />
                     <StatusMetric label="OCR jobs" value={String(document.ocrJobs.length)} icon={<ScanSearch className="h-4 w-4" />} />
                     <StatusMetric label="Entidades" value={String(document.entities.length)} icon={<CheckCircle2 className="h-4 w-4" />} />
                   </div>
                 </div>
 
+                {document.processingWarnings.length > 0 ? (
+                  <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
+                    <div className="mb-2 flex items-center gap-2 font-medium">
+                      <TriangleAlert className="h-4 w-4" />
+                      Limites conhecidos deste processamento
+                    </div>
+                    <ul className="space-y-1 text-amber-100/90">
+                      {document.processingWarnings.map((warning, index) => (
+                        <li key={`${document.id}-warning-${index}`}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                   <section className="space-y-2">
-                    <h4 className="text-sm font-medium text-foreground">Entidades extraídas (mock)</h4>
+                    <h4 className="text-sm font-medium text-foreground">Entidades extraidas (mock)</h4>
                     <div className="space-y-2">
                       {document.entities.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhuma entidade disponível.</p>
+                        <p className="text-sm text-muted-foreground">Nenhuma entidade disponivel.</p>
                       ) : (
                         document.entities.map((entity) => (
                           <div key={entity.id} className="rounded-2xl border border-border/70 px-3 py-2 text-sm">

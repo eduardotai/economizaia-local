@@ -1,28 +1,18 @@
-import type {
-  DocumentAuditEntry,
-  DocumentPage,
-  DocumentRegistrationInput,
-  ExtractedEntity,
-  IngestedDocument,
-  OCRJob,
-} from "@/models/documents";
-import { detectDocumentKind, createId, nowIso, readTextSnippet } from "@/lib/document-utils";
+import type { DocumentRegistrationInput, DocumentProcessingStatus, IngestedDocument } from "@/models/documents";
+import { createId, detectDocumentKind, nowIso } from "@/lib/document-utils";
+import {
+  buildMockEntities,
+  createDocumentAuditEntry,
+  getOcrAdapter,
+  getTextExtractionAdapter,
+  mapWarningsToMessages,
+} from "@/lib/document-extraction";
 
-function createAuditEntry(
-  documentId: string,
-  step: DocumentAuditEntry["step"],
-  status: DocumentAuditEntry["status"],
-  message: string,
-  metadata?: DocumentAuditEntry["metadata"],
-): DocumentAuditEntry {
+function updateDocumentStatus(document: IngestedDocument, status: DocumentProcessingStatus): IngestedDocument {
   return {
-    id: createId("audit"),
-    documentId,
-    step,
+    ...document,
     status,
-    message,
-    metadata,
-    createdAt: nowIso(),
+    updatedAt: nowIso(),
   };
 }
 
@@ -52,11 +42,12 @@ export async function registerDocumentLocally({ file, source = "upload" }: Docum
     ocrJobs: [],
     entities: [],
     processingWarnings: [
-      "Pipeline documental em modo placeholder/local-first.",
+      "Pipeline documental local-first ativa no navegador.",
       "Nenhuma regra fiscal oficial é inferida automaticamente nesta etapa.",
+      "Extração estrutural ainda exige revisão humana; partes do fluxo seguem stub por design neste checkpoint.",
     ],
     auditTrail: [
-      createAuditEntry(documentId, "document_registered", "completed", "Documento registrado no storage local do navegador.", {
+      createDocumentAuditEntry(documentId, "document_registered", "completed", "Documento registrado no storage local do navegador.", {
         source,
         mimeType: file.type || "application/octet-stream",
         sizeInBytes: file.size,
@@ -66,149 +57,98 @@ export async function registerDocumentLocally({ file, source = "upload" }: Docum
   };
 }
 
-export async function extractPdfTextStub(document: IngestedDocument, file: File): Promise<DocumentPage[]> {
-  const snippet = await readTextSnippet(file);
-
-  return [
-    {
-      id: createId("page"),
-      documentId: document.id,
-      pageNumber: 1,
-      source: "pdf_text",
-      extractedText: snippet
-        ? `STUB pdf.js: texto preliminar derivado do arquivo. Trecho detectado: ${snippet}`
-        : "STUB pdf.js: extração real de texto ainda não implementada.",
-      confidence: 0.42,
-      warnings: [
-        "Placeholder: integrar pdf.js em worker local para leitura real do PDF.",
-        "Este texto não deve ser tratado como extração oficial do documento.",
-      ],
-    },
-  ];
-}
-
-export function enqueueOcrStub(document: IngestedDocument, pages: DocumentPage[]): OCRJob {
-  const createdAt = nowIso();
-
-  return {
-    id: createId("ocr"),
-    documentId: document.id,
-    pageIds: pages.map((page) => page.id),
-    status: "completed",
-    engine: "tesseract_stub",
-    createdAt,
-    updatedAt: createdAt,
-    warnings: [
-      "Placeholder: Tesseract.js ainda não foi conectado ao worker local.",
-      "Job marcado como concluído apenas para demonstrar o fluxo de status.",
-    ],
-  };
-}
-
-export function generateMockEntities(document: IngestedDocument, pages: DocumentPage[]): ExtractedEntity[] {
-  const primaryPage = pages[0];
-  const safeName = document.originalFileName.replace(/\.[^.]+$/, "");
-
-  return [
-    {
-      id: createId("entity"),
-      documentId: document.id,
-      pageId: primaryPage?.id,
-      label: "document_number",
-      value: `MOCK-${document.id.slice(-6).toUpperCase()}`,
-      confidence: 0.54,
-      source: "mock_pipeline",
-      note: "Valor sintético criado para validar a etapa de extração estruturada.",
-    },
-    {
-      id: createId("entity"),
-      documentId: document.id,
-      pageId: primaryPage?.id,
-      label: "supplier_name",
-      value: safeName,
-      confidence: 0.35,
-      source: "mock_pipeline",
-      note: "Placeholder derivado do nome do arquivo enviado pelo usuário.",
-    },
-    {
-      id: createId("entity"),
-      documentId: document.id,
-      pageId: primaryPage?.id,
-      label: "note",
-      value: "Entidades mockadas para exercitar revisão humana e trilha de auditoria local.",
-      confidence: 0.2,
-      source: "mock_pipeline",
-      note: "Não representa interpretação fiscal oficial.",
-    },
-  ];
-}
-
 export async function processDocumentPlaceholder(document: IngestedDocument, file: File): Promise<IngestedDocument> {
-  const auditTrail = [...document.auditTrail];
-  const processingWarnings = [...document.processingWarnings];
+  let current = updateDocumentStatus(document, "classifying");
+  const auditTrail = [...current.auditTrail];
+  const processingWarnings = [...current.processingWarnings];
 
   auditTrail.push(
-    createAuditEntry(document.id, "type_detected", "completed", `Tipo do arquivo detectado como ${document.kind}.`, {
-      kind: document.kind,
-      mimeType: document.detectedMimeType,
+    createDocumentAuditEntry(current.id, "type_detected", "completed", `Tipo do arquivo detectado como ${current.kind}.`, {
+      kind: current.kind,
+      mimeType: current.detectedMimeType,
     }),
   );
 
-  let pages: DocumentPage[] = [];
-  let ocrJobs: OCRJob[] = [];
+  current = updateDocumentStatus(current, "extracting_text");
+  const textAdapter = getTextExtractionAdapter(current.kind);
+  const textResult = await textAdapter.extract({ document: current, file });
+  const pages = textResult.pages;
+  processingWarnings.push(...mapWarningsToMessages(textResult.warnings));
 
-  if (document.kind === "pdf") {
-    pages = await extractPdfTextStub(document, file);
-    auditTrail.push(
-      createAuditEntry(document.id, "pdf_text_extracted_stub", "warning", "Extração de texto de PDF executada em modo stub.", {
-        pageCount: pages.length,
-      }),
-    );
-    processingWarnings.push("Extração de PDF ainda usa stub local e precisa de integração real com pdf.js.");
-  }
-
-  if (document.kind === "image" || document.kind === "pdf") {
-    const ocrJob = enqueueOcrStub(document, pages);
-    ocrJobs = [ocrJob];
-    auditTrail.push(
-      createAuditEntry(document.id, "ocr_enqueued_stub", "warning", "OCR enfileirado e finalizado em modo stub.", {
-        jobId: ocrJob.id,
-        pageCount: ocrJob.pageIds.length,
-      }),
-    );
-    processingWarnings.push("OCR ainda usa placeholder com status fictício para demonstrar a pipeline.");
-  }
-
-  if (document.kind === "xml" && pages.length === 0) {
-    const xmlSnippet = await readTextSnippet(file);
-    pages = [
-      {
-        id: createId("page"),
-        documentId: document.id,
-        pageNumber: 1,
-        source: "image_stub",
-        extractedText: xmlSnippet || "STUB XML: leitura estrutural ainda não implementada.",
-        warnings: ["Placeholder: parser XML local será adicionado em checkpoint futuro."],
-      },
-    ];
-  }
-
-  const entities = generateMockEntities(document, pages);
   auditTrail.push(
-    createAuditEntry(document.id, "entities_generated_mock", "warning", "Entidades extraídas geradas por mock da pipeline.", {
+    createDocumentAuditEntry(
+      current.id,
+      "pdf_text_extracted_stub",
+      textResult.capability.status === "available" ? "completed" : textResult.capability.status === "unavailable" ? "failed" : "warning",
+      textResult.capability.message,
+      {
+        engine: textResult.capability.engine,
+        mode: textResult.capability.mode,
+        pageCount: pages.length,
+      },
+    ),
+  );
+
+  current = updateDocumentStatus(current, textResult.suggestedStatus === "failed" ? "failed" : current.kind === "image" ? "ocr_queued" : "extracting_entities");
+
+  let ocrJobs = current.ocrJobs;
+  if (current.kind === "pdf" || current.kind === "image") {
+    const ocrAdapter = getOcrAdapter(current.kind);
+
+    if (ocrAdapter) {
+      current = updateDocumentStatus(current, "ocr_queued");
+      const ocrResult = await ocrAdapter.run({ document: current, file, pages });
+      ocrJobs = ocrResult.jobs;
+      processingWarnings.push(...mapWarningsToMessages(ocrResult.warnings));
+      auditTrail.push(
+        createDocumentAuditEntry(current.id, "ocr_enqueued_stub", "warning", ocrResult.capability.message, {
+          engine: ocrResult.capability.engine,
+          mode: ocrResult.capability.mode,
+          jobCount: ocrResult.jobs.length,
+          pageCount: pages.length,
+        }),
+      );
+      current = updateDocumentStatus(current, ocrResult.suggestedStatus);
+    }
+  }
+
+  current = updateDocumentStatus(current, current.status === "failed" ? "failed" : "extracting_entities");
+  const entities = buildMockEntities(current, pages);
+
+  auditTrail.push(
+    createDocumentAuditEntry(current.id, "entities_generated_mock", "warning", "Entidades estruturadas continuam mockadas; servem só para validar UX/auditoria local.", {
       entityCount: entities.length,
     }),
-    createAuditEntry(document.id, "processing_completed", "completed", "Documento finalizado no fluxo esqueleto de ingestão local."),
+  );
+
+  const finalStatus: DocumentProcessingStatus = current.status === "failed" ? "failed" : processingWarnings.length > 3 ? "review_required" : "completed";
+
+  auditTrail.push(
+    createDocumentAuditEntry(
+      current.id,
+      finalStatus === "failed" ? "processing_failed" : "processing_completed",
+      finalStatus === "failed" ? "failed" : finalStatus === "review_required" ? "warning" : "completed",
+      finalStatus === "failed"
+        ? "Pipeline local não conseguiu concluir o documento com segurança neste checkpoint."
+        : finalStatus === "review_required"
+          ? "Pipeline concluída com limitações explícitas; revisão humana recomendada antes de qualquer uso fiscal."
+          : "Documento concluído localmente com extração inicial e trilha auditável.",
+      {
+        warnings: processingWarnings.length,
+        entities: entities.length,
+        ocrJobs: ocrJobs.length,
+      },
+    ),
   );
 
   return {
-    ...document,
-    status: "completed",
+    ...current,
+    status: finalStatus,
     updatedAt: nowIso(),
     pages,
     ocrJobs,
     entities,
     auditTrail,
-    processingWarnings,
+    processingWarnings: Array.from(new Set(processingWarnings)),
   };
 }

@@ -1,18 +1,6 @@
-import type { FiscalDocument } from "@/models/domain";
+import type { TextExtractionRequest, TextExtractionResult } from "@/lib/document-extraction";
+import { getTextExtractionAdapter } from "@/lib/document-extraction";
 
-export interface PdfExtractionResult {
-  text: string;
-  pageCount: number;
-  warnings: string[];
-}
-
-export async function extractPdfLocally(_document: FiscalDocument): Promise<PdfExtractionResult> {
-  return {
-    text: "",
-    pageCount: 0,
-    warnings: [
-      "Placeholder: integrar pdf.js aqui para extração local de texto.",
-      "Nenhum conteúdo real é processado neste starter base.",
-    ],
-  };
+export async function extractPdfLocally(request: TextExtractionRequest): Promise<TextExtractionResult> {
+  return getTextExtractionAdapter("pdf").extract(request);
 }

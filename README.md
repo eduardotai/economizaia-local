@@ -140,11 +140,22 @@ npm start
 
 1. Usuário envia PDF, imagem ou XML pela interface.
 2. O app registra metadados do arquivo no storage local do navegador.
-3. A pipeline detecta o tipo do documento.
-4. Se for PDF, cria uma etapa stub de extração textual.
-5. Se for imagem/PDF, cria um job stub de OCR.
-6. O sistema gera entidades mockadas para validar revisão humana e UX.
-7. Cada passo entra na trilha de auditoria local do documento.
+3. A pipeline transita explicitamente por `registered -> classifying -> extracting_text -> ocr_queued/extracting_entities -> completed/review_required/failed`.
+4. PDFs agora tentam extração textual local inicial com `pdf.js` (`pdfjs-dist`) no navegador.
+5. Quando `pdf.js` não consegue ler bem o conteúdo, o app cai em fallback local/stub claramente marcado na auditoria e nos warnings.
+6. Imagens e PDFs entram por um adapter isolado de OCR preparado para `Tesseract.js`, mas a execução OCR real ainda segue stub neste checkpoint.
+7. XML já pode ser lido localmente como texto bruto, porém o parser semântico/fiscal ainda não foi implementado.
+8. Entidades continuam mockadas para validar UX, revisão humana e trilha de auditoria — não são extração confiável para uso produtivo.
+9. Cada passo entra na trilha de auditoria local do documento com engine/modo/status explícitos.
+
+### Limites atuais da extração documental
+
+- Sem backend remoto: todo o processamento continua local-first no navegador.
+- `pdf.js` já está conectado, mas ainda não cobre bem PDFs escaneados, criptografados ou semanticamente ruins.
+- `Tesseract.js` está isolado via adapter/plumbing, porém o OCR real ainda não foi habilitado em worker local.
+- XML ainda entra como texto bruto; extração estruturada de NFe/NFS-e continua como próximo passo.
+- Entidades exibidas na UI continuam mockadas e devem ser tratadas como placeholders auditáveis.
+- Se o documento terminar como `review_required`, isso significa que houve leitura parcial, fallback ou limitação conhecida.
 
 ## Contrato do rule engine
 
@@ -182,12 +193,14 @@ Esses artefatos documentam o contrato expandido do motor, incluindo confidence b
 
 ## Próximos passos sugeridos
 
-1. Substituir o bundle mock por um pacote normativo versionado revisado por especialista.
-2. Implementar workers reais para `pdf.js` e `Tesseract.js`.
+1. Mover `pdf.js` para worker dedicado e adicionar renderização de páginas para cobrir PDFs escaneados.
+2. Habilitar OCR real com `Tesseract.js` em worker local, com idioma/configuração explícitos e progresso por página.
 3. Criar revisão manual de entidades/documentos antes de qualquer uso em cálculo.
-4. Adicionar parser XML local mais estruturado.
-5. Evoluir o índice local mock para retrieval com embeddings no navegador.
-6. Acoplar WebLLM somente como explicador do resultado estruturado e das evidências recuperadas.
+4. Adicionar parser XML local mais estruturado para NFe/NFS-e e normalização de campos.
+5. Substituir entidades mock por extração heurística/local progressiva com confidence e rastreabilidade.
+6. Substituir o bundle mock por um pacote normativo versionado revisado por especialista.
+7. Evoluir o índice local mock para retrieval com embeddings no navegador.
+8. Acoplar WebLLM somente como explicador do resultado estruturado e das evidências recuperadas.
 
 ## Stack planejada
 
