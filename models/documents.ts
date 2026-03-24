@@ -11,6 +11,8 @@ export type DocumentProcessingStatus =
   | "extracting_entities"
   | "completed"
   | "review_required"
+  | "ready_for_manual_review"
+  | "manual_review_confirmed"
   | "failed";
 
 export type AuditStepStatus = "pending" | "running" | "completed" | "warning" | "failed";
@@ -65,6 +67,25 @@ export interface ExtractedFieldCandidate {
   note: string;
 }
 
+export interface ManualReviewField {
+  id: string;
+  label: string;
+  value: string;
+  sourcePath?: string;
+  reviewed: boolean;
+  updatedAt: string;
+  note?: string;
+}
+
+export interface ManualReviewState {
+  required: boolean;
+  reviewedAt?: string;
+  reviewedBy: "usuario_local" | "pendente";
+  confirmed: boolean;
+  fields: ManualReviewField[];
+  notes: string[];
+}
+
 export interface DocumentAuditEntry {
   id: string;
   documentId: string;
@@ -74,6 +95,8 @@ export interface DocumentAuditEntry {
     | "pdf_text_extracted_stub"
     | "ocr_enqueued_stub"
     | "entities_generated_mock"
+    | "manual_review_required"
+    | "manual_review_confirmed"
     | "processing_completed"
     | "processing_failed";
   status: AuditStepStatus;
@@ -97,6 +120,7 @@ export interface IngestedDocument {
   ocrJobs: OCRJob[];
   entities: ExtractedEntity[];
   extractedFields: ExtractedFieldCandidate[];
+  manualReview: ManualReviewState;
   auditTrail: DocumentAuditEntry[];
   processingWarnings: string[];
   placeholder: true;

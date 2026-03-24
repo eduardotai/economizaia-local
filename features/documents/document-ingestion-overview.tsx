@@ -7,12 +7,12 @@ const stages = [
     description: "Arquivo é catalogado no navegador com metadados e referência local para futuras revisões.",
   },
   {
-    title: "Classificação e leitura",
-    description: "Pipeline detecta o tipo do arquivo e prepara extração textual com stubs explícitos.",
+    title: "Extração textual priorizada",
+    description: "PDF digital deve priorizar pdf.js; OCR existe apenas como fallback quando não houver texto selecionável suficiente.",
   },
   {
-    title: "Auditoria pronta",
-    description: "Cada passo gera eventos auditáveis, facilitando inspeção humana e evolução incremental.",
+    title: "Revisão manual antes do cálculo",
+    description: "Campos extraídos ou digitados precisam ser revisados/editados manualmente antes de qualquer execução futura do rule engine.",
   },
 ];
 
@@ -20,10 +20,10 @@ export function DocumentIngestionOverview() {
   return (
     <Card className="space-y-6">
       <div className="space-y-2">
-        <Badge>Checkpoint: document ingestion pipeline skeleton</Badge>
+        <Badge>Checkpoint: revisão manual obrigatória + parser XML placeholder</Badge>
         <CardTitle>Nova trilha local para ingestão documental</CardTitle>
         <CardDescription>
-          Este checkpoint adiciona upload inicial, persistência local e uma pipeline fake para preparar OCR, leitura de PDF, entidades extraídas e auditoria de execução.
+          Este checkpoint reforça a priorização de leitura textual com pdf.js para PDF digital, mantém OCR apenas como fallback e destaca uma etapa de revisão/edição manual antes de qualquer cálculo.
         </CardDescription>
       </div>
 

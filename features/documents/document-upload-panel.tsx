@@ -19,7 +19,7 @@ export function DocumentUploadPanel({ onFilesSelected, isProcessing }: DocumentU
       <div className="space-y-2">
         <CardTitle>Upload inicial de documentos</CardTitle>
         <CardDescription>
-          Envie PDFs, imagens ou XMLs para registrar no storage local e acionar a pipeline esqueleto de ingestão.
+          Envie PDFs, imagens ou XMLs para registrar no storage local e acionar a pipeline local com revisão manual obrigatória.
         </CardDescription>
       </div>
 
@@ -45,7 +45,7 @@ export function DocumentUploadPanel({ onFilesSelected, isProcessing }: DocumentU
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Arraste arquivos aqui ou selecione manualmente</p>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Tudo permanece local no navegador. PDFs usam leitura inicial com pdf.js, XMLs usam parser estrutural genérico/placeholder e OCR ainda segue stub.
+              Tudo permanece local no navegador. PDFs digitais usam pdf.js como prioridade, XMLs usam parser estrutural genérico/placeholder e OCR segue apenas como fallback técnico.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -54,12 +54,13 @@ export function DocumentUploadPanel({ onFilesSelected, isProcessing }: DocumentU
             </Button>
             <span className="text-xs text-muted-foreground">Formatos visados: PDF, PNG/JPG/WebP, XML</span>
           </div>
-          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-left text-xs text-amber-100 max-w-2xl">
+          <div className="max-w-2xl rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-left text-xs text-amber-100">
             <div className="font-medium text-amber-50">Limites deste checkpoint</div>
             <ul className="mt-2 space-y-1">
+              <li>• Tesseract/OCR não é confiável o suficiente para cálculo fiscal nesta versão.</li>
               <li>• XML não recebe interpretação fiscal oficial; apenas leitura genérica de tags e valores.</li>
-              <li>• Campos sugeridos podem representar outra entidade/trecho do XML e exigem revisão humana.</li>
-              <li>• Status review_required é esperado quando houver heurística, fallback ou warning relevante.</li>
+              <li>• Campos sugeridos podem representar outro trecho do arquivo e exigem revisão/edição humana.</li>
+              <li>• Sem confirmação manual, o fluxo deve permanecer bloqueado para cálculo a partir do documento.</li>
             </ul>
           </div>
           <input

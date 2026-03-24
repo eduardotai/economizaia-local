@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, DatabaseZap, Lock, RefreshCcw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DatabaseZap, FilePenLine, Lock, RefreshCcw, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,9 @@ import { createProfileSavedAuditEvent, createSimulationAuditEvents } from "@/lib
 import { saveProfileSnapshot, saveSimulationSnapshot } from "@/lib/local-snapshots";
 import {
   activityTypeLabels,
+  appModeLabels,
   createEmptyOnboardingProfile,
+  flowModeLabels,
   onboardingProfileToTaxpayerProfile,
   revenueRangeLabels,
   simulationPeriodLabels,
@@ -83,10 +85,7 @@ export function SimulationWorkspace() {
     let mounted = true;
 
     async function load() {
-      const [storedProfile, latestReport] = await Promise.all([
-        localDb.getAnonymousOnboardingProfile(),
-        localDb.getLatestUserReport(),
-      ]);
+      const [storedProfile, latestReport] = await Promise.all([localDb.getAnonymousOnboardingProfile(), localDb.getLatestUserReport()]);
       const nextProfile = storedProfile ?? createEmptyOnboardingProfile();
 
       if (!mounted) return;
@@ -143,6 +142,18 @@ export function SimulationWorkspace() {
     setProfile({ ...profile, [field]: value, updatedAt: new Date().toISOString() });
   }
 
+  function updateQuickManualField<K extends keyof AnonymousOnboardingProfile["quickManualInput"]>(field: K, value: AnonymousOnboardingProfile["quickManualInput"][K]) {
+    if (!profile) return;
+    setProfile({
+      ...profile,
+      updatedAt: new Date().toISOString(),
+      quickManualInput: {
+        ...profile.quickManualInput,
+        [field]: value,
+      },
+    });
+  }
+
   if (loading || !profile) {
     return (
       <Card className="space-y-3">
@@ -174,7 +185,47 @@ export function SimulationWorkspace() {
             </p>
           </div>
 
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
+            <div className="flex items-center gap-2 font-medium">
+              <FilePenLine className="h-4 w-4" />
+              Revisao manual antes do calculo
+            </div>
+            <p className="mt-2 leading-6 text-amber-100/90">
+              Dados extraidos de documentos ou informados rapidamente precisam ser revisados manualmente antes de qualquer execucao futura do rule engine. Este checkpoint apenas prepara a UX e a captura local, sem regra fiscal oficial.
+            </p>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Modo do app</span>
+              <select
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={profile.appMode}
+                onChange={(event) => updateProfile("appMode", event.target.value as AnonymousOnboardingProfile["appMode"])}
+              >
+                {Object.entries(appModeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Fluxo de entrada</span>
+              <select
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={profile.flowMode}
+                onChange={(event) => updateProfile("flowMode", event.target.value as AnonymousOnboardingProfile["flowMode"])}
+              >
+                {Object.entries(flowModeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="space-y-2 text-sm">
               <span className="font-medium text-foreground">Tipo de usuário</span>
               <select
@@ -247,7 +298,10 @@ export function SimulationWorkspace() {
                     <button
                       key={value}
                       type="button"
-                      onClick={() => updateProfile("simulationPeriod", value as AnonymousOnboardingProfile["simulationPeriod"])}
+                      onClick={() => {
+                        updateProfile("simulationPeriod", value as AnonymousOnboardingProfile["simulationPeriod"]);
+                        updateQuickManualField("periodLabel", label);
+                      }}
                       className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
                         active
                           ? "border-emerald-400/50 bg-emerald-400/10 text-white"
@@ -262,6 +316,88 @@ export function SimulationWorkspace() {
               </div>
             </label>
           </div>
+
+          {profile.flowMode === "manual_rapido" ? (
+            <div className="space-y-4 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4">
+              <div>
+                <div className="text-sm font-medium text-foreground">Modo rápido manual</div>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Preencha manualmente os campos críticos para preparar uma futura revisão antes do cálculo: faturamento mensal, despesas dedutíveis, regime atual, CNAE/atividade e período.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-foreground">Faturamento mensal</span>
+                  <input
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.monthlyRevenue}
+                    onChange={(event) => updateQuickManualField("monthlyRevenue", event.target.value)}
+                    placeholder="Ex.: 25000"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-foreground">Despesas dedutíveis</span>
+                  <input
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.monthlyExpenses}
+                    onChange={(event) => updateQuickManualField("monthlyExpenses", event.target.value)}
+                    placeholder="Ex.: 3500"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-foreground">Regime atual</span>
+                  <select
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.currentRegime}
+                    onChange={(event) => updateQuickManualField("currentRegime", event.target.value as AnonymousOnboardingProfile["quickManualInput"]["currentRegime"])}
+                  >
+                    <option value="indefinido">Não informado</option>
+                    <option value="mei">MEI</option>
+                    <option value="simples">Simples Nacional</option>
+                    <option value="lucro_presumido">Lucro Presumido</option>
+                    <option value="geral">Outro / geral</option>
+                  </select>
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-foreground">Período</span>
+                  <input
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.periodLabel}
+                    onChange={(event) => updateQuickManualField("periodLabel", event.target.value)}
+                    placeholder="Ex.: Recorte mensal"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm sm:col-span-2">
+                  <span className="font-medium text-foreground">Atividade / descrição operacional</span>
+                  <input
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.activityDescription}
+                    onChange={(event) => updateQuickManualField("activityDescription", event.target.value)}
+                    placeholder="Ex.: Serviços de marketing digital"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm sm:col-span-2">
+                  <span className="font-medium text-foreground">CNAE ou código de atividade (se aplicável)</span>
+                  <input
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                    value={profile.quickManualInput.cnaeOrActivityCode}
+                    onChange={(event) => updateQuickManualField("cnaeOrActivityCode", event.target.value)}
+                    placeholder="Ex.: 6201-5/01"
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              Fluxo com documentos selecionado. Extrações documentais continuam sujeitas a revisão/edição manual antes de qualquer cálculo.
+            </div>
+          )}
 
           <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
             <label className="flex items-start gap-3">
@@ -283,7 +419,7 @@ export function SimulationWorkspace() {
                 onChange={(event) => updateProfile("consentMockAwareness", event.target.checked)}
               />
               <span>
-                Entendo que a simulação deste checkpoint é <strong>mock/placeholder</strong> e não representa cálculo fiscal oficial.
+                Entendo que a simulação deste checkpoint é <strong>mock/placeholder</strong>, não representa cálculo fiscal oficial e exige revisão humana antes de qualquer uso prático.
               </span>
             </label>
           </div>
@@ -328,11 +464,15 @@ export function SimulationWorkspace() {
                   <ShieldCheck className="h-4 w-4 text-emerald-300" /> Premissas do perfil
                 </div>
                 <ul className="mt-3 space-y-2 text-muted-foreground">
+                  <li>Modo: {appModeLabels[profile.appMode]}</li>
+                  <li>Fluxo: {flowModeLabels[profile.flowMode]}</li>
                   <li>Tipo: {userTypeLabels[profile.userType]}</li>
-                  <li>Faturamento: {revenueRangeLabels[profile.revenueRange]}</li>
-                  <li>Atividade: {activityTypeLabels[profile.activityType]}</li>
-                  <li>Regime atual: {profile.currentRegime ? profile.currentRegime : "não informado"}</li>
-                  <li>Período: {simulationPeriodLabels[profile.simulationPeriod]}</li>
+                  <li>Faturamento: {profile.flowMode === "manual_rapido" ? profile.quickManualInput.monthlyRevenue : revenueRangeLabels[profile.revenueRange]}</li>
+                  <li>Atividade: {profile.flowMode === "manual_rapido" ? profile.quickManualInput.activityDescription : activityTypeLabels[profile.activityType]}</li>
+                  <li>Regime atual: {profile.flowMode === "manual_rapido" ? (profile.quickManualInput.currentRegime || "não informado") : profile.currentRegime ? profile.currentRegime : "não informado"}</li>
+                  <li>CNAE: {profile.quickManualInput.cnaeOrActivityCode || "não informado"}</li>
+                  <li>Despesas: {profile.quickManualInput.monthlyExpenses || "não informado"}</li>
+                  <li>Período: {profile.flowMode === "manual_rapido" ? profile.quickManualInput.periodLabel : simulationPeriodLabels[profile.simulationPeriod]}</li>
                 </ul>
               </div>
 
@@ -417,7 +557,7 @@ export function SimulationWorkspace() {
                   Não há cálculo fiscal real, interpretação normativa oficial ou recomendação contábil automatizada neste fluxo.
                 </li>
                 <li className="rounded-2xl border border-border bg-background p-3">
-                  O próximo passo realista é revisão humana especializada antes de qualquer uso prático fora do ambiente de protótipo.
+                  Dados extraídos de documentos ou preenchidos no modo rápido manual precisam ser revisados antes do cálculo.
                 </li>
               </ul>
             </Card>

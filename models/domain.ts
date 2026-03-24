@@ -30,7 +30,10 @@ export interface TaxpayerProfile {
   documentId?: string;
   regime: TaxRegime;
   monthlyRevenue: number;
+  monthlyExpenses?: number;
   activityDescription: string;
+  cnaeOrActivityCode?: string;
+  simulationPeriodLabel?: string;
   city?: string;
   state?: string;
   notes?: string[];
@@ -137,9 +140,14 @@ export interface RuleBundleSource {
   validity?: RuleTemporalValidity;
 }
 
-export interface RuleBundle {
-  id: string;
+export interface VersionedRuleBundleContract {
   version: string;
+  hash: string;
+  updatedAt: string;
+}
+
+export interface RuleBundle extends VersionedRuleBundleContract {
+  id: string;
   schemaVersion: string;
   generatedAt: string;
   bundleStatus: "mock" | "draft" | "review_required";
@@ -148,6 +156,7 @@ export interface RuleBundle {
   assumptionsPolicy: string;
   refusalPolicy: string;
   maintainer: string;
+  updateAvailableNotice?: string;
   sources: RuleBundleSource[];
   rules: RuleDefinition[];
 }

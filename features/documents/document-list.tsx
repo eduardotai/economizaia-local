@@ -1,11 +1,15 @@
-import { FileText, ImageIcon, FileCode2, AlertCircle, CheckCircle2, ScanSearch, TriangleAlert, Sparkles, ShieldAlert, Files } from "lucide-react";
+import { FileText, ImageIcon, FileCode2, AlertCircle, CheckCircle2, ScanSearch, TriangleAlert, Sparkles, ShieldAlert, Files, PencilLine, Lock, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { formatBytes } from "@/lib/document-utils";
+import { documentCanRunRuleEngine } from "@/lib/document-pipeline";
 import type { IngestedDocument } from "@/models/documents";
 
 interface DocumentListProps {
   documents: IngestedDocument[];
+  onManualReviewChange: (documentId: string, fieldId: string, value: string) => void;
+  onConfirmManualReview: (documentId: string) => void;
 }
 
 const kindIconMap = {
@@ -20,10 +24,12 @@ const statusLabelMap: Record<IngestedDocument["status"], string> = {
   registered: "Registrado",
   classifying: "Classificando",
   extracting_text: "Extraindo texto",
-  ocr_queued: "OCR preparado",
+  ocr_queued: "OCR fallback preparado",
   extracting_entities: "Extraindo entidades",
-  completed: "Concluido",
-  review_required: "Revisao obrigatoria",
+  completed: "Concluído",
+  review_required: "Revisão obrigatória",
+  ready_for_manual_review: "Pronto para revisão manual",
+  manual_review_confirmed: "Revisão confirmada",
   failed: "Falhou",
 };
 
@@ -36,28 +42,32 @@ const statusToneMap: Record<IngestedDocument["status"], string> = {
   extracting_entities: "border-sky-400/20 bg-sky-400/10 text-sky-100",
   completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
   review_required: "border-amber-400/20 bg-amber-500/20 text-amber-50",
+  ready_for_manual_review: "border-amber-400/20 bg-amber-500/20 text-amber-50",
+  manual_review_confirmed: "border-emerald-400/20 bg-emerald-500/20 text-emerald-50",
   failed: "border-red-400/20 bg-red-400/10 text-red-100",
 };
 
-export function DocumentList({ documents }: DocumentListProps) {
+export function DocumentList({ documents, onManualReviewChange, onConfirmManualReview }: DocumentListProps) {
   return (
     <Card className="space-y-5">
       <div className="space-y-2">
         <CardTitle>Arquivos processados localmente</CardTitle>
         <CardDescription>
-          Pipeline documental local-first com estados visiveis, parser XML placeholder inicial, adapters isolados e revisão humana destacada.
+          Pipeline documental local-first com pdf.js priorizado para PDF digital, OCR apenas como fallback e revisão humana obrigatória.
         </CardDescription>
       </div>
 
       <div className="space-y-4">
         {documents.length === 0 ? (
           <div className="rounded-2xl border border-border/70 bg-background/40 p-5 text-sm text-muted-foreground">
-            Nenhum documento enviado ainda. Faca um upload para iniciar o fluxo local.
+            Nenhum documento enviado ainda. Faça um upload para iniciar o fluxo local.
           </div>
         ) : (
           documents.map((document) => {
             const Icon = kindIconMap[document.kind];
-            const hasReviewRequired = document.status === "review_required";
+            const hasReviewRequired =
+              document.status === "review_required" || document.status === "ready_for_manual_review" || !document.manualReview.confirmed;
+            const canRun = documentCanRunRuleEngine(document);
 
             return (
               <div key={document.id} className="rounded-3xl border border-border/70 bg-background/40 p-5">
@@ -78,36 +88,80 @@ export function DocumentList({ documents }: DocumentListProps) {
                     <div className="flex flex-wrap gap-2">
                       <Badge className={statusToneMap[document.status]}>{statusLabelMap[document.status]}</Badge>
                       <Badge className="border-slate-400/20 bg-slate-400/10 text-slate-200">{document.kind.toUpperCase()}</Badge>
-                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">local-first</Badge>
-                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">placeholder auditavel</Badge>
+                      <Badge className="border-emerald-400/20 bg-emerald-400/10 text-emerald-100">pdf.js prioritário</Badge>
+                      <Badge className="border-amber-400/20 bg-amber-400/10 text-amber-100">OCR fallback</Badge>
                     </div>
                   </div>
 
                   <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-4 lg:min-w-[460px]">
-                    <StatusMetric label="Paginas" value={String(document.pages.length)} icon={<FileText className="h-4 w-4" />} />
+                    <StatusMetric label="Páginas" value={String(document.pages.length)} icon={<FileText className="h-4 w-4" />} />
                     <StatusMetric label="Campos" value={String(document.extractedFields.length)} icon={<Files className="h-4 w-4" />} />
                     <StatusMetric label="OCR jobs" value={String(document.ocrJobs.length)} icon={<ScanSearch className="h-4 w-4" />} />
                     <StatusMetric label="Entidades" value={String(document.entities.length)} icon={<CheckCircle2 className="h-4 w-4" />} />
                   </div>
                 </div>
 
+                <div className={`mt-4 rounded-2xl border p-4 text-sm ${canRun ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-50" : "border-amber-400/30 bg-amber-500/10 text-amber-50"}`}>
+                  <div className="mb-2 flex items-center gap-2 font-medium">
+                    {canRun ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    Gate do rule engine
+                  </div>
+                  <p>
+                    {canRun
+                      ? "Revisão manual confirmada. Este documento já está apto para alimentar um cálculo futuro."
+                      : "Bloqueado: sem revisão manual confirmada, o app não deve rodar cálculo originado deste documento."}
+                  </p>
+                </div>
+
                 {hasReviewRequired ? (
                   <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-50">
                     <div className="mb-2 flex items-center gap-2 font-medium">
                       <ShieldAlert className="h-4 w-4" />
-                      Revisao manual obrigatoria
+                      Revisão manual obrigatória
                     </div>
                     <p className="text-amber-100/90">
-                      Este documento terminou com status <strong>review_required</strong>. Os campos abaixo sao apenas sugestoes locais/heuristicas e nao devem ser tratados como interpretacao fiscal oficial.
+                      Este documento exige confirmação humana antes de qualquer uso fiscal. Os campos abaixo são apenas sugestões locais/heurísticas e não representam interpretação fiscal oficial.
                     </p>
                   </div>
                 ) : null}
 
-                {document.extractedFields.length > 0 ? (
+                {document.manualReview.fields.length > 0 ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <PencilLine className="h-4 w-4 text-emerald-300" />
+                      Revisão e edição manual obrigatória
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {document.manualReview.fields.map((field) => (
+                        <label key={field.id} className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3 text-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-medium text-foreground">{field.label}</div>
+                              {field.sourcePath ? <div className="text-[11px] text-muted-foreground">origem: {field.sourcePath}</div> : null}
+                            </div>
+                            <Badge className={field.reviewed ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-100" : "border-amber-400/20 bg-amber-400/10 text-amber-100"}>
+                              {field.reviewed ? "revisto" : "pendente"}
+                            </Badge>
+                          </div>
+                          <textarea
+                            className="mt-2 min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                            value={field.value}
+                            onChange={(event) => onManualReviewChange(document.id, field.id, event.target.value)}
+                          />
+                          <div className="mt-2 text-xs text-muted-foreground">{field.note ?? "Campo manualmente revisável."}</div>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <Button onClick={() => onConfirmManualReview(document.id)}>Confirmar revisão manual</Button>
+                      <span className="text-xs text-muted-foreground">A confirmação marca todos os campos como revisados e libera o próximo passo do fluxo.</span>
+                    </div>
+                  </div>
+                ) : document.extractedFields.length > 0 ? (
                   <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
                     <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
                       <Sparkles className="h-4 w-4 text-emerald-300" />
-                      Campos extraidos para revisao
+                      Campos extraídos para revisão
                     </div>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {document.extractedFields.map((field) => (
@@ -145,10 +199,10 @@ export function DocumentList({ documents }: DocumentListProps) {
 
                 <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                   <section className="space-y-2">
-                    <h4 className="text-sm font-medium text-foreground">Entidades extraidas</h4>
+                    <h4 className="text-sm font-medium text-foreground">Entidades extraídas</h4>
                     <div className="space-y-2">
                       {document.entities.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhuma entidade disponivel.</p>
+                        <p className="text-sm text-muted-foreground">Nenhuma entidade disponível.</p>
                       ) : (
                         document.entities.map((entity) => (
                           <div key={entity.id} className="rounded-2xl border border-border/70 px-3 py-2 text-sm">

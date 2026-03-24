@@ -2,9 +2,11 @@ import type { RuleBundle } from "@/models/domain";
 
 export const starterRuleBundle: RuleBundle = {
   id: "starter-bundle-local",
-  version: "0.2.0-mock",
+  version: "0.3.0-mock",
+  hash: "mock-sha256-manual-review-required-2026-03-24",
+  updatedAt: new Date("2026-03-24T10:45:00-03:00").toISOString(),
   schemaVersion: "2026-03-rule-bundle-v1",
-  generatedAt: new Date("2026-03-24T10:00:00-03:00").toISOString(),
+  generatedAt: new Date("2026-03-24T10:45:00-03:00").toISOString(),
   bundleStatus: "mock",
   jurisdiction: {
     country: "BR",
@@ -19,6 +21,8 @@ export const starterRuleBundle: RuleBundle = {
   refusalPolicy:
     "Se faltarem dados centrais para enquadramento ou vigência, o motor deve retornar insufficient_data/refused em vez de fechar cálculo com aparência oficial.",
   maintainer: "economizaia-local/mock-engine",
+  updateAvailableNotice:
+    "Bundle local mock versionado. Futuramente este app deve avisar e permitir atualização controlada quando houver pacote revisado mais recente.",
   sources: [
     {
       id: "architecture-doc",
@@ -74,10 +78,7 @@ export const starterRuleBundle: RuleBundle = {
         },
       ],
       fallbackPolicy: "insufficient_data",
-      notes: [
-        "Não traduz lei real.",
-        "Serve apenas para evolução de contrato e testes locais.",
-      ],
+      notes: ["Não traduz lei real.", "Serve apenas para evolução de contrato e testes locais."],
     },
     {
       id: "guardrail-insufficient-data",
@@ -102,7 +103,7 @@ export const starterRuleBundle: RuleBundle = {
         {
           sourceId: "architecture-doc",
           title: "ARCHITECTURE.md",
-          note: "Relaciona-se ao princípio de não fechar cálculo quando faltarem dados relevantes.",
+          note: "Relaciona-se ao princípio de não fechar cálculo quando faltam dados relevantes.",
         },
       ],
       fallbackPolicy: "refuse",

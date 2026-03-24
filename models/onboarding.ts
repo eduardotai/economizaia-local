@@ -17,6 +17,9 @@ export type ActivityType =
 
 export type SimulationPeriod = "mensal" | "trimestral" | "anual";
 
+export type LocalAppMode = "leve" | "ia";
+export type InputFlowMode = "documentos" | "manual_rapido";
+
 export interface AnonymousOnboardingProfile {
   id: string;
   createdAt: string;
@@ -28,4 +31,14 @@ export interface AnonymousOnboardingProfile {
   simulationPeriod: SimulationPeriod;
   consentLocalOnly: boolean;
   consentMockAwareness: boolean;
+  appMode: LocalAppMode;
+  flowMode: InputFlowMode;
+  quickManualInput: {
+    monthlyRevenue: string;
+    monthlyExpenses: string;
+    currentRegime: "mei" | "simples" | "lucro_presumido" | "geral" | "indefinido";
+    activityDescription: string;
+    cnaeOrActivityCode: string;
+    periodLabel: string;
+  };
 }

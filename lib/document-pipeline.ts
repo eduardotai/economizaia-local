@@ -42,6 +42,16 @@ export async function registerDocumentLocally({ file, source = "upload" }: Docum
     ocrJobs: [],
     entities: [],
     extractedFields: [],
+    manualReview: {
+      required: true,
+      reviewedBy: "pendente",
+      confirmed: false,
+      fields: [],
+      notes: [
+        "Revisão manual obrigatória antes do rule engine quando a origem for documental.",
+        "OCR não é confiável o suficiente para cálculo fiscal; pdf.js deve ser priorizado para PDFs digitais.",
+      ],
+    },
     processingWarnings: [
       "Pipeline documental local-first ativa no navegador.",
       "Nenhuma regra fiscal oficial é inferida automaticamente nesta etapa.",
@@ -119,35 +129,39 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
   const entities = textResult.entities?.length ? textResult.entities : buildMockEntities(current, pages);
 
   auditTrail.push(
-    createDocumentAuditEntry(current.id, "entities_generated_mock", entities === textResult.entities ? "warning" : "warning", "Entidades estruturadas ainda dependem de heurística/mock e servem para validar UX/auditoria local.", {
+    createDocumentAuditEntry(current.id, "entities_generated_mock", "warning", "Entidades estruturadas ainda dependem de heurística/mock e servem para validar UX/auditoria local.", {
       entityCount: entities.length,
       extractedFields: extractedFields.length,
       xmlHeuristic: current.kind === "xml",
     }),
   );
 
-  const finalStatus: DocumentProcessingStatus =
-    current.status === "failed"
-      ? "failed"
-      : current.kind === "xml" || extractedFields.some((field) => field.reviewRequired) || processingWarnings.length > 3
-        ? "review_required"
-        : "completed";
+  const manualReviewFields = extractedFields.map((field) => ({
+    id: field.id,
+    label: field.label,
+    value: field.value,
+    sourcePath: field.sourcePath,
+    reviewed: false,
+    updatedAt: nowIso(),
+    note: field.note,
+  }));
+
+  const finalStatus: DocumentProcessingStatus = current.status === "failed" ? "failed" : "ready_for_manual_review";
 
   auditTrail.push(
     createDocumentAuditEntry(
       current.id,
-      finalStatus === "failed" ? "processing_failed" : "processing_completed",
-      finalStatus === "failed" ? "failed" : finalStatus === "review_required" ? "warning" : "completed",
+      "manual_review_required",
+      finalStatus === "failed" ? "failed" : "warning",
       finalStatus === "failed"
         ? "Pipeline local não conseguiu concluir o documento com segurança neste checkpoint."
-        : finalStatus === "review_required"
-          ? "Pipeline concluída com limitações explícitas; revisão humana recomendada antes de qualquer uso fiscal."
-          : "Documento concluído localmente com extração inicial e trilha auditável.",
+        : "Documento preparado para revisão manual obrigatória antes de qualquer cálculo no rule engine.",
       {
         warnings: processingWarnings.length,
         entities: entities.length,
         extractedFields: extractedFields.length,
         ocrJobs: ocrJobs.length,
+        manualReviewRequired: true,
       },
     ),
   );
@@ -160,7 +174,60 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
     ocrJobs,
     entities,
     extractedFields,
+    manualReview: {
+      required: true,
+      reviewedBy: "pendente",
+      confirmed: false,
+      reviewedAt: undefined,
+      fields: manualReviewFields,
+      notes: Array.from(
+        new Set([
+          ...current.manualReview.notes,
+          "Sem revisão manual confirmada, o app deve bloquear o cálculo originado de documento.",
+          "pdf.js foi priorizado para PDFs digitais; OCR permanece apenas como fallback/placebo técnico neste checkpoint.",
+        ]),
+      ),
+    },
     auditTrail,
     processingWarnings: Array.from(new Set(processingWarnings)),
   };
+}
+
+export function confirmManualReview(document: IngestedDocument, fields: IngestedDocument["manualReview"]["fields"]): IngestedDocument {
+  const reviewedAt = nowIso();
+
+  return {
+    ...document,
+    status: "manual_review_confirmed",
+    updatedAt: reviewedAt,
+    extractedFields: document.extractedFields.map((field) => {
+      const reviewedField = fields.find((item) => item.id === field.id);
+      return reviewedField
+        ? {
+            ...field,
+            value: reviewedField.value,
+            reviewRequired: !reviewedField.reviewed,
+            note: reviewedField.note ?? field.note,
+          }
+        : field;
+    }),
+    manualReview: {
+      ...document.manualReview,
+      confirmed: true,
+      reviewedBy: "usuario_local",
+      reviewedAt,
+      fields: fields.map((field) => ({ ...field, reviewed: true, updatedAt: reviewedAt })),
+      notes: Array.from(new Set([...document.manualReview.notes, "Revisão manual confirmada localmente pelo usuário."])),
+    },
+    auditTrail: [
+      ...document.auditTrail,
+      createDocumentAuditEntry(document.id, "manual_review_confirmed", "completed", "Revisão manual confirmada antes do cálculo.", {
+        reviewedFields: fields.length,
+      }),
+    ],
+  };
+}
+
+export function documentCanRunRuleEngine(document: IngestedDocument): boolean {
+  return Boolean(document.manualReview.required && document.manualReview.confirmed && document.status === "manual_review_confirmed");
 }
