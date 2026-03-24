@@ -2,6 +2,8 @@ import { HeroSection } from "@/features/home/hero-section";
 import { ProductPillars } from "@/features/home/product-pillars";
 import { LocalReadinessPanel } from "@/features/home/local-readiness-panel";
 import { FakeSimulationPreview } from "@/features/home/fake-simulation-preview";
+import { DocumentIngestionOverview } from "@/features/documents/document-ingestion-overview";
+import { DocumentIngestionWorkspace } from "@/features/documents/document-ingestion-workspace";
 
 export default function HomePage() {
   return (
@@ -12,6 +14,8 @@ export default function HomePage() {
         <LocalReadinessPanel />
         <FakeSimulationPreview />
       </div>
+      <DocumentIngestionOverview />
+      <DocumentIngestionWorkspace />
     </main>
   );
 }
