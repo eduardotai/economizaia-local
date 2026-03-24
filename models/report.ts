@@ -1,4 +1,5 @@
 import type { ConfidenceLevel, DataGap, SimulationAlert, SimulationPremise, SimulationResult } from "@/models/domain";
+import type { LocalExplainerCapability, LocalExplainerChatSession, LocalExplainerResponse } from "@/models/local-explainer";
 import type { ExplanationContext } from "@/rag";
 
 export interface ReportPremiseItem {
@@ -47,6 +48,9 @@ export interface UserReport {
   title: string;
   createdAt: string;
   updatedAt: string;
+  localExplainerCapability?: LocalExplainerCapability;
+  localExplainerResponse?: LocalExplainerResponse;
+  localExplainerChat?: LocalExplainerChatSession;
   summary: {
     executive: string;
     estimatedSavingsLabel: string;

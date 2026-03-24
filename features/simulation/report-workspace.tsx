@@ -58,7 +58,7 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
     setIsSaving(true);
     setStatusMessage(null);
 
-    const nextReport = buildUserReport({ profile, simulation });
+    const nextReport = await buildUserReport({ profile, simulation });
     await persistUserReport(nextReport);
     await saveReportSnapshot(nextReport);
 
@@ -223,13 +223,62 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
             </div>
 
             <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
-              <div className="font-medium text-white">Evolução planejada</div>
-              <ul className="mt-3 list-disc space-y-2 pl-5">
-                {(report.explanation?.nextEvolutionNotes ?? []).map((note) => (
-                  <li key={note}>{note}</li>
-                ))}
-              </ul>
+              <div className="font-medium text-white">Capability do local explainer</div>
+              <div className="mt-3 space-y-2">
+                <p>Status: {report.localExplainerCapability?.statusLabel ?? "N/A"}</p>
+                <p>Provider: {report.localExplainerCapability?.provider ?? "N/A"}</p>
+                <p>Disponibilidade: {report.localExplainerCapability?.availability ?? "N/A"}</p>
+                <p>{report.localExplainerCapability?.detail ?? "Capability ainda não registrada."}</p>
+              </div>
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3 text-amber-100">
+                Tudo acima permanece explícito como mock/placeholder até a integração real com WebLLM local.
+              </div>
             </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-white">Resposta local do explainer (mock)</div>
+              <p className="mt-3 leading-6">{report.localExplainerResponse?.answer ?? "Nenhuma resposta local gerada."}</p>
+              <p className="mt-3 text-amber-200">{report.localExplainerResponse?.disclaimer}</p>
+              <div className="mt-3 space-y-2">
+                {(report.localExplainerResponse?.evidence ?? []).map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-border bg-muted/20 p-3">
+                    <div className="font-medium text-white">{item.title}</div>
+                    <div className="mt-1">{item.summary}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-white">Chat placeholder do explainer</div>
+              <p className="mt-3 leading-6">
+                Sessão preparada para futura UX conversacional local, sem modelo real carregado neste checkpoint.
+              </p>
+              <div className="mt-3 space-y-2">
+                {(report.localExplainerChat?.turns ?? []).map((turn) => (
+                  <div key={turn.id} className="rounded-2xl border border-border bg-muted/20 p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{turn.role}</div>
+                    <div className="mt-1">{turn.content}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
+            <div className="font-medium text-white">Evolução planejada</div>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
+              {(report.explanation?.nextEvolutionNotes ?? []).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-amber-100">
+              {(report.localExplainerResponse?.followUps ?? []).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
           </div>
 
           <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">

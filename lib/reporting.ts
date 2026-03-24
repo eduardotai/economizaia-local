@@ -5,6 +5,7 @@ import type { PersistedUserReport, ReportPremiseItem, UserReport } from "@/model
 import type { SimulationPremise, SimulationResult } from "@/models/domain";
 import { activityTypeLabels, revenueRangeLabels, simulationPeriodLabels, userTypeLabels } from "@/lib/onboarding";
 import { createId, nowIso } from "@/lib/document-utils";
+import { explainWithLocalLlm, getLocalExplainerCapability, createLocalExplainerChatSession } from "@/lib/web-llm";
 import { buildExplanationContext } from "@/rag";
 
 const REPORT_STORAGE_KEY_PREFIX = "user_report";
@@ -214,8 +215,35 @@ export function renderReportHtml(report: UserReport) {
                   .join("")
               : "<li>Nenhum bloco de contexto disponível.</li>"
           }</ul>
+          <h3>Capability do local explainer</h3>
+          <ul>
+            <li><strong>Status:</strong> ${escapeHtml(report.localExplainerCapability?.statusLabel ?? "N/A")}</li>
+            <li><strong>Provider:</strong> ${escapeHtml(report.localExplainerCapability?.provider ?? "N/A")}</li>
+            <li><strong>Disponibilidade:</strong> ${escapeHtml(report.localExplainerCapability?.availability ?? "N/A")}</li>
+            <li>${escapeHtml(report.localExplainerCapability?.detail ?? "Capability ainda não registrada.")}</li>
+          </ul>
+          <h3>Resposta local mock</h3>
+          <p>${escapeHtml(report.localExplainerResponse?.answer ?? "Nenhuma resposta local gerada.")}</p>
+          <p><strong>Disclaimer do explainer:</strong> ${escapeHtml(report.localExplainerResponse?.disclaimer ?? "Sem disclaimer adicional.")}</p>
+          <h3>Chat placeholder</h3>
+          <ul>${
+            report.localExplainerChat?.turns.length
+              ? report.localExplainerChat.turns
+                  .map(
+                    (turn) => `
+                      <li>
+                        <strong>${escapeHtml(turn.role)}</strong><br />
+                        ${escapeHtml(turn.content)}
+                      </li>`,
+                  )
+                  .join("")
+              : "<li>Nenhuma sessão de chat placeholder disponível.</li>"
+          }</ul>
           <h3>Próxima evolução técnica</h3>
-          <ul>${renderList(report.explanation?.nextEvolutionNotes ?? ["Sem notas adicionais."])}</ul>
+          <ul>${renderList([
+            ...(report.explanation?.nextEvolutionNotes ?? []),
+            ...(report.localExplainerResponse?.followUps ?? []),
+          ])}</ul>
         </div>
       </section>
 
@@ -229,13 +257,14 @@ export function renderReportHtml(report: UserReport) {
 </html>`;
 }
 
-export function buildUserReport(params: { simulation: SimulationResult; profile: AnonymousOnboardingProfile }): PersistedUserReport {
+export async function buildUserReport(params: { simulation: SimulationResult; profile: AnonymousOnboardingProfile }): Promise<PersistedUserReport> {
   const { simulation, profile } = params;
   const now = nowIso();
   const reportId = createId(REPORT_STORAGE_KEY_PREFIX);
 
   const explanationContext = buildExplanationContext({
     simulationId: simulation.id,
+    reportId,
     query: [
       simulation.summary.narrative,
       simulation.summary.confidence.rationale,
@@ -243,6 +272,30 @@ export function buildUserReport(params: { simulation: SimulationResult; profile:
       ...simulation.audit.missingData.map((gap) => gap.label),
     ].join(" "),
     tags: ["mock", "placeholder", "revisão humana", "rag local"],
+  });
+
+  const localExplainerCapability = getLocalExplainerCapability();
+  const localExplainerResponse = await explainWithLocalLlm({
+    simulation: {
+      id: simulation.id,
+      summary: simulation.summary,
+      audit: simulation.audit,
+      currentScenario: simulation.currentScenario,
+      status: simulation.status,
+    },
+    reportId,
+    channel: "report",
+    explanationContext,
+  });
+  const localExplainerChat = await createLocalExplainerChatSession({
+    simulation: {
+      id: simulation.id,
+      summary: simulation.summary,
+      audit: simulation.audit,
+      currentScenario: simulation.currentScenario,
+      status: simulation.status,
+    },
+    reportId,
   });
 
   const report: UserReport = {
@@ -258,6 +311,9 @@ export function buildUserReport(params: { simulation: SimulationResult; profile:
       decisionStatus: simulation.summary.decisionStatus,
       scenarioLabel: simulation.currentScenario.label,
     },
+    localExplainerCapability,
+    localExplainerResponse,
+    localExplainerChat,
     premises: mapPremises(simulation, profile),
     confidence: {
       level: simulation.summary.confidence.level,
