@@ -31,6 +31,7 @@ export function DocumentIngestionWorkspace() {
       reviewRequired: documents.filter((document) => document.status === "review_required").length,
       failed: documents.filter((document) => document.status === "failed").length,
       warnings: documents.reduce((accumulator, document) => accumulator + document.processingWarnings.length, 0),
+      extractedFields: documents.reduce((accumulator, document) => accumulator + document.extractedFields.length, 0),
     };
   }, [documents]);
 
@@ -74,22 +75,23 @@ export function DocumentIngestionWorkspace() {
         <div className="rounded-[1.75rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm text-amber-50">
           <div className="mb-2 flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4" />
-            Checkpoint documental: extracao local inicial com limites explicitos
+            Checkpoint documental: parser XML placeholder inicial + revisao manual reforcada
           </div>
           <ul className="space-y-1 text-amber-100/90">
-            <li>• PDF agora tenta leitura local inicial com pdf.js antes de cair em fallback stub.</li>
+            <li>• PDF tenta leitura local inicial com pdf.js antes de cair em fallback stub.</li>
+            <li>• XML agora passa por parser estrutural generico local, com campos sugeridos e status review_required.</li>
             <li>• OCR foi isolado em adapter proprio, mas o reconhecimento real com Tesseract.js ainda nao esta habilitado.</li>
-            <li>• XML entra como texto bruto local; parser fiscal estruturado continua como proximo passo.</li>
-            <li>• Sempre revise entidades, warnings e auditoria antes de qualquer uso fiscal/manual.</li>
+            <li>• Sempre revise campos extraidos, warnings e auditoria antes de qualquer uso fiscal/manual.</li>
           </ul>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-6">
           <SummaryCard label="Documentos" value={String(summary.total)} />
           <SummaryCard label="Concluidos" value={String(summary.completed)} />
           <SummaryCard label="Revisao" value={String(summary.reviewRequired)} />
           <SummaryCard label="Falhas" value={String(summary.failed)} />
           <SummaryCard label="Warnings" value={String(summary.warnings)} />
+          <SummaryCard label="Campos" value={String(summary.extractedFields)} />
         </div>
 
         {error ? <div className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}

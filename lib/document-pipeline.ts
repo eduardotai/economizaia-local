@@ -41,6 +41,7 @@ export async function registerDocumentLocally({ file, source = "upload" }: Docum
     pages: [],
     ocrJobs: [],
     entities: [],
+    extractedFields: [],
     processingWarnings: [
       "Pipeline documental local-first ativa no navegador.",
       "Nenhuma regra fiscal oficial é inferida automaticamente nesta etapa.",
@@ -73,6 +74,7 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
   const textAdapter = getTextExtractionAdapter(current.kind);
   const textResult = await textAdapter.extract({ document: current, file });
   const pages = textResult.pages;
+  const extractedFields = textResult.extractedFields ?? [];
   processingWarnings.push(...mapWarningsToMessages(textResult.warnings));
 
   auditTrail.push(
@@ -85,6 +87,7 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
         engine: textResult.capability.engine,
         mode: textResult.capability.mode,
         pageCount: pages.length,
+        extractedFields: extractedFields.length,
       },
     ),
   );
@@ -113,15 +116,22 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
   }
 
   current = updateDocumentStatus(current, current.status === "failed" ? "failed" : "extracting_entities");
-  const entities = buildMockEntities(current, pages);
+  const entities = textResult.entities?.length ? textResult.entities : buildMockEntities(current, pages);
 
   auditTrail.push(
-    createDocumentAuditEntry(current.id, "entities_generated_mock", "warning", "Entidades estruturadas continuam mockadas; servem só para validar UX/auditoria local.", {
+    createDocumentAuditEntry(current.id, "entities_generated_mock", entities === textResult.entities ? "warning" : "warning", "Entidades estruturadas ainda dependem de heurística/mock e servem para validar UX/auditoria local.", {
       entityCount: entities.length,
+      extractedFields: extractedFields.length,
+      xmlHeuristic: current.kind === "xml",
     }),
   );
 
-  const finalStatus: DocumentProcessingStatus = current.status === "failed" ? "failed" : processingWarnings.length > 3 ? "review_required" : "completed";
+  const finalStatus: DocumentProcessingStatus =
+    current.status === "failed"
+      ? "failed"
+      : current.kind === "xml" || extractedFields.some((field) => field.reviewRequired) || processingWarnings.length > 3
+        ? "review_required"
+        : "completed";
 
   auditTrail.push(
     createDocumentAuditEntry(
@@ -136,6 +146,7 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
       {
         warnings: processingWarnings.length,
         entities: entities.length,
+        extractedFields: extractedFields.length,
         ocrJobs: ocrJobs.length,
       },
     ),
@@ -148,6 +159,7 @@ export async function processDocumentPlaceholder(document: IngestedDocument, fil
     pages,
     ocrJobs,
     entities,
+    extractedFields,
     auditTrail,
     processingWarnings: Array.from(new Set(processingWarnings)),
   };

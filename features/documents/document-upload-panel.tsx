@@ -43,11 +43,9 @@ export function DocumentUploadPanel({ onFilesSelected, isProcessing }: DocumentU
             {isProcessing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">
-              Arraste arquivos aqui ou selecione manualmente
-            </p>
+            <p className="text-sm font-medium text-foreground">Arraste arquivos aqui ou selecione manualmente</p>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Tudo permanece local no navegador. OCR, leitura de PDF e extrações ainda estão marcados como stubs/placeholders.
+              Tudo permanece local no navegador. PDFs usam leitura inicial com pdf.js, XMLs usam parser estrutural genérico/placeholder e OCR ainda segue stub.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -55,6 +53,14 @@ export function DocumentUploadPanel({ onFilesSelected, isProcessing }: DocumentU
               Selecionar arquivos
             </Button>
             <span className="text-xs text-muted-foreground">Formatos visados: PDF, PNG/JPG/WebP, XML</span>
+          </div>
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-left text-xs text-amber-100 max-w-2xl">
+            <div className="font-medium text-amber-50">Limites deste checkpoint</div>
+            <ul className="mt-2 space-y-1">
+              <li>• XML não recebe interpretação fiscal oficial; apenas leitura genérica de tags e valores.</li>
+              <li>• Campos sugeridos podem representar outra entidade/trecho do XML e exigem revisão humana.</li>
+              <li>• Status review_required é esperado quando houver heurística, fallback ou warning relevante.</li>
+            </ul>
           </div>
           <input
             ref={inputRef}

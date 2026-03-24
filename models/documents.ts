@@ -26,7 +26,7 @@ export interface DocumentPage {
   id: string;
   documentId: string;
   pageNumber: number;
-  source: "pdf_text" | "ocr_stub" | "image_stub";
+  source: "pdf_text" | "ocr_stub" | "image_stub" | "xml_placeholder";
   extractedText: string;
   confidence?: number;
   warnings: string[];
@@ -51,6 +51,17 @@ export interface ExtractedEntity {
   value: string;
   confidence: number;
   source: "mock_pipeline";
+  note: string;
+}
+
+export interface ExtractedFieldCandidate {
+  id: string;
+  documentId: string;
+  label: string;
+  value: string;
+  sourcePath?: string;
+  confidence: number;
+  reviewRequired: boolean;
   note: string;
 }
 
@@ -85,6 +96,7 @@ export interface IngestedDocument {
   pages: DocumentPage[];
   ocrJobs: OCRJob[];
   entities: ExtractedEntity[];
+  extractedFields: ExtractedFieldCandidate[];
   auditTrail: DocumentAuditEntry[];
   processingWarnings: string[];
   placeholder: true;

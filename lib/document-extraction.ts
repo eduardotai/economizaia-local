@@ -4,11 +4,13 @@ import type {
   DocumentPage,
   DocumentProcessingStatus,
   ExtractedEntity,
+  ExtractedFieldCandidate,
   IngestedDocument,
   OCRJob,
   SupportedDocumentKind,
 } from "@/models/documents";
 import { createId, nowIso, readTextSnippet } from "@/lib/document-utils";
+import { parseXmlPlaceholder } from "@/lib/xml-placeholder-parser";
 
 export type ExtractionCapabilityStatus = "available" | "degraded" | "stub" | "unavailable";
 
@@ -42,6 +44,8 @@ export interface TextExtractionResult {
   warnings: ExtractionWarning[];
   capability: ExtractionCapability;
   suggestedStatus: DocumentProcessingStatus;
+  entities?: ExtractedEntity[];
+  extractedFields?: ExtractedFieldCandidate[];
 }
 
 export interface OcrRequest {
@@ -180,33 +184,35 @@ const xmlTextAdapter: TextExtractionAdapter = {
   supportedKinds: ["xml"],
   async extract({ document, file }) {
     const text = (await file.text()).trim();
+    const parsed = parseXmlPlaceholder(document, text);
 
     return {
-      pages: [
-        {
-          id: createId("page"),
-          documentId: document.id,
-          pageNumber: 1,
-          source: "image_stub",
-          extractedText: text,
-          confidence: text ? 0.92 : 0,
-          warnings: ["Leitura textual do XML disponível, mas parser fiscal estruturado ainda é stub neste checkpoint."],
-        },
-      ],
+      pages: parsed.pages,
+      entities: parsed.entities,
+      extractedFields: parsed.discoveredFields.map((field) => ({
+        id: createId("field"),
+        documentId: document.id,
+        label: field.tagName,
+        value: field.value,
+        sourcePath: field.path,
+        confidence: 0.52,
+        reviewRequired: true,
+        note: "Campo lido do XML por parser local placeholder. Revisão humana obrigatória.",
+      })),
       warnings: [
         {
           code: "XML_PARSER_STUB",
-          message: "XML é lido como texto bruto localmente. Parser semântico/tributário ainda não foi implementado.",
+          message: "XML passou por parser local genérico/placeholder. Campos são heurísticos e não equivalem a interpretação fiscal oficial.",
           recoverable: true,
         },
       ],
       capability: {
-        engine: "browser-file-text",
+        engine: "local-xml-placeholder-parser",
         status: "degraded",
         mode: "hybrid",
-        message: "XML já pode ser lido localmente como texto, mas sem estrutura fiscal confiável.",
+        message: "XML agora recebe parsing estrutural local inicial, com campos genéricos e limites explicitamente marcados.",
       },
-      suggestedStatus: "extracting_entities",
+      suggestedStatus: "review_required",
     };
   },
 };
