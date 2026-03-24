@@ -14,3 +14,14 @@ const demoProfile: TaxpayerProfile = {
 export function runFakeSimulation(): SimulationResult {
   return mockTaxRuleEngine.simulate(demoProfile);
 }
+
+export function runInsufficientDataSimulation(): SimulationResult {
+  return mockTaxRuleEngine.simulate({
+    id: "demo-profile-insufficient",
+    businessName: "Operação sem dados mínimos",
+    regime: "indefinido",
+    monthlyRevenue: 0,
+    activityDescription: "",
+    city: "São Paulo",
+  });
+}

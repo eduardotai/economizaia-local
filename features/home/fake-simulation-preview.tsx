@@ -21,13 +21,19 @@ export function FakeSimulationPreview() {
 
       <div className="space-y-3 text-sm text-muted-foreground">
         <div>
-          <strong className="text-foreground">Premissas:</strong> {result.audit.assumptions.join(" • ")}
+          <strong className="text-foreground">Status:</strong> {result.summary.decisionStatus}
         </div>
         <div>
-          <strong className="text-foreground">Regras avaliadas:</strong> {result.audit.appliedRules.join(" • ")}
+          <strong className="text-foreground">Confiança:</strong> {result.summary.confidence.label} — {result.summary.confidence.rationale}
         </div>
         <div>
-          <strong className="text-foreground">Pendências:</strong> {result.audit.missingData.join(" • ")}
+          <strong className="text-foreground">Premissas:</strong> {result.audit.premises.map((premise) => premise.label).join(" • ")}
+        </div>
+        <div>
+          <strong className="text-foreground">Regras avaliadas:</strong> {result.audit.appliedRules.map((rule) => `${rule.title} [${rule.status}]`).join(" • ")}
+        </div>
+        <div>
+          <strong className="text-foreground">Pendências:</strong> {result.audit.missingData.map((gap) => gap.label).join(" • ")}
         </div>
       </div>
     </Card>

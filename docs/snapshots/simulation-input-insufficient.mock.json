@@ -1,0 +1,8 @@
+{
+  "id": "demo-profile-insufficient",
+  "businessName": "Operação sem dados mínimos",
+  "regime": "indefinido",
+  "monthlyRevenue": 0,
+  "activityDescription": "",
+  "city": "São Paulo"
+}

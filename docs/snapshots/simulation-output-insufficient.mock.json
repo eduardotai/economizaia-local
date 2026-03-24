@@ -1,0 +1,122 @@
+{
+  "id": "sim-demo-profile-insufficient",
+  "createdAt": "2026-03-24T10:05:00.000Z",
+  "profileId": "demo-profile-insufficient",
+  "bundleId": "starter-bundle-local",
+  "bundleVersion": "0.2.0-mock",
+  "status": "refused",
+  "currentScenario": {
+    "id": "scenario-refused-demo-profile-insufficient",
+    "label": "Simula??o n?o conclu?da (mock)",
+    "monthlyTaxEstimate": 0,
+    "annualTaxEstimate": 0,
+    "notes": [
+      "Placeholder t?cnico para representar recusa por dados insuficientes."
+    ],
+    "confidence": {
+      "level": "very_low",
+      "score": 0.08,
+      "label": "Muito baixa",
+      "rationale": "Dados essenciais ausentes impedem qualquer simula??o confi?vel.",
+      "drivers": [
+        "Guardrail de insufici?ncia de dados acionado"
+      ],
+      "blockers": [
+        "Campos obrigat?rios ausentes"
+      ],
+      "reviewRecommendation": "Solicitar revis?o humana antes de seguir."
+    },
+    "placeholdersUsed": [
+      "refusal-scenario-placeholder"
+    ]
+  },
+  "summary": {
+    "estimatedSavings": 0,
+    "estimatedSavingsLabel": "R$?0,00",
+    "narrative": "Simula??o recusada pelo guardrail mock. O objetivo ? demonstrar um comportamento conservador quando faltam dados essenciais.",
+    "decisionStatus": "refused",
+    "confidence": {
+      "level": "very_low",
+      "score": 0.08,
+      "label": "Muito baixa",
+      "rationale": "Dados essenciais ausentes impedem qualquer simula??o confi?vel.",
+      "drivers": [
+        "Guardrail de insufici?ncia de dados acionado"
+      ],
+      "blockers": [
+        "Campos obrigat?rios ausentes"
+      ],
+      "reviewRecommendation": "Solicitar revis?o humana antes de seguir."
+    }
+  },
+  "audit": {
+    "premises": [],
+    "appliedRules": [
+      {
+        "ruleId": "guardrail-insufficient-data",
+        "title": "Recusa mock por insufici?ncia de dados",
+        "status": "refused",
+        "reason": "Campos m?nimos ausentes bloquearam a simula??o.",
+        "citations": []
+      }
+    ],
+    "missingData": [
+      {
+        "id": "gap-state",
+        "field": "state",
+        "label": "UF",
+        "description": "A jurisdi??o estadual n?o foi informada.",
+        "severity": "blocking",
+        "blocking": true,
+        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
+        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+      },
+      {
+        "id": "gap-monthlyRevenue",
+        "field": "monthlyRevenue",
+        "label": "Receita mensal",
+        "description": "Receita mensal ausente, inv?lida ou n?o positiva.",
+        "severity": "blocking",
+        "blocking": true,
+        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
+        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+      }
+    ],
+    "warnings": [
+      {
+        "id": "alert-insufficient-data",
+        "severity": "critical",
+        "title": "Dados insuficientes para concluir a an?lise",
+        "message": "O motor mock recusou a conclus?o para evitar um resultado com falsa apar?ncia oficial.",
+        "code": "INSUFFICIENT_DATA",
+        "sourceRuleId": "guardrail-insufficient-data",
+        "requiresHumanReview": true
+      }
+    ],
+    "timeline": [
+      {
+        "id": "evt-insufficient-data",
+        "timestamp": "2026-03-24T10:05:00.000Z",
+        "kind": "insufficient_data",
+        "message": "Guardrail mock acionado por insufici?ncia de dados.",
+        "refs": [
+          "state",
+          "monthlyRevenue"
+        ]
+      }
+    ]
+  },
+  "refusal": {
+    "reasonCode": "INSUFFICIENT_DATA",
+    "message": "A simula??o foi recusada pelo motor mock porque faltam dados m?nimos para um resultado audit?vel.",
+    "missingFields": [
+      "state",
+      "monthlyRevenue"
+    ],
+    "nextSteps": [
+      "Preencher os campos obrigat?rios ausentes.",
+      "Revisar manualmente a jurisdi??o e a descri??o da atividade.",
+      "Executar nova simula??o somente ap?s complementar os dados."
+    ]
+  }
+}

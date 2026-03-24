@@ -1,0 +1,162 @@
+{
+  "id": "sim-demo-profile",
+  "createdAt": "2026-03-24T10:00:00.000Z",
+  "profileId": "demo-profile",
+  "bundleId": "starter-bundle-local",
+  "bundleVersion": "0.2.0-mock",
+  "status": "partial",
+  "currentScenario": {
+    "id": "cenario-atual-mock",
+    "label": "Cen?rio atual (mock)",
+    "monthlyTaxEstimate": 2160,
+    "annualTaxEstimate": 25920,
+    "notes": [
+      "Estimativa fake para validar o fluxo do starter."
+    ],
+    "confidence": {
+      "level": "low",
+      "score": 0.34,
+      "label": "Baixa",
+      "rationale": "Simula??o propositalmente mock, ?til para testar fluxo mas n?o para decis?o fiscal real.",
+      "drivers": [
+        "Receita mensal declarada",
+        "Regime informado",
+        "Compara??o determin?stica local"
+      ],
+      "blockers": [
+        "Aus?ncia de regra normativa oficial",
+        "Depend?ncia de placeholders"
+      ],
+      "reviewRecommendation": "Usar somente para testes e demonstra??es internas."
+    },
+    "placeholdersUsed": [
+      "comparison-rate-placeholder",
+      "regime-evaluation-placeholder"
+    ]
+  },
+  "suggestedScenario": {
+    "id": "cenario-sugerido-mock",
+    "label": "Cen?rio alternativo (mock)",
+    "monthlyTaxEstimate": 1890,
+    "annualTaxEstimate": 22680,
+    "notes": [
+      "Compara??o simulada local, sem car?ter oficial."
+    ],
+    "confidence": {
+      "level": "low",
+      "score": 0.34,
+      "label": "Baixa",
+      "rationale": "Simula??o propositalmente mock, ?til para testar fluxo mas n?o para decis?o fiscal real.",
+      "drivers": [
+        "Receita mensal declarada",
+        "Regime informado",
+        "Compara??o determin?stica local"
+      ],
+      "blockers": [
+        "Aus?ncia de regra normativa oficial",
+        "Depend?ncia de placeholders"
+      ],
+      "reviewRecommendation": "Usar somente para testes e demonstra??es internas."
+    },
+    "placeholdersUsed": [
+      "comparison-rate-placeholder",
+      "regime-evaluation-placeholder"
+    ]
+  },
+  "summary": {
+    "estimatedSavings": 270,
+    "estimatedSavingsLabel": "R$?270,00/m?s",
+    "narrative": "Resultado gerado por simula??o local fake para comprovar a integra??o entre dom?nio, engine e UI. Antes de uso real, substitua por regras validadas por especialista fiscal.",
+    "decisionStatus": "completed_with_gaps",
+    "confidence": {
+      "level": "low",
+      "score": 0.36,
+      "label": "Baixa",
+      "rationale": "A sa?da ? ?til para testes de contrato, mas depende de premissas placeholder e n?o expressa regra oficial.",
+      "drivers": [
+        "Bundle versionado",
+        "Premissas expl?citas",
+        "Trilha audit?vel"
+      ],
+      "blockers": [
+        "Sem base normativa oficial consolidada"
+      ],
+      "reviewRecommendation": "N?o usar em produ??o regulat?ria sem revis?o especializada."
+    }
+  },
+  "audit": {
+    "premises": [
+      {
+        "id": "premise-monthly-revenue",
+        "label": "Receita mensal declarada",
+        "description": "Receita mensal informada pelo usu?rio ao iniciar a simula??o.",
+        "kind": "declared_by_user",
+        "value": 18000,
+        "sourceRefs": [
+          "profile.monthlyRevenue"
+        ],
+        "confidence": {
+          "level": "moderate",
+          "score": 0.6,
+          "label": "Moderada",
+          "rationale": "Depende de declara??o manual do usu?rio, sem documento comprobat?rio neste starter.",
+          "drivers": [
+            "Valor informado: R$?18.000,00"
+          ]
+        },
+        "explicitPlaceholder": false
+      }
+    ],
+    "appliedRules": [
+      {
+        "ruleId": "placeholder-regime-comparison",
+        "title": "Compara??o inicial de cen?rios",
+        "status": "applied",
+        "reason": "Regra mock aplicada para comparar dois cen?rios artificiais e exercitar a auditoria.",
+        "citations": [
+          {
+            "sourceId": "architecture-doc",
+            "title": "ARCHITECTURE.md",
+            "note": "Refer?ncia interna de arquitetura, n?o normativa."
+          }
+        ]
+      }
+    ],
+    "missingData": [
+      {
+        "id": "gap-officialNormativeBasis",
+        "field": "officialNormativeBasis",
+        "label": "Base normativa oficial consolidada",
+        "description": "Este starter ainda n?o possui pacote normativo revisado por especialista.",
+        "severity": "medium",
+        "blocking": false,
+        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
+        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+      }
+    ],
+    "warnings": [
+      {
+        "id": "alert-non-official",
+        "severity": "critical",
+        "title": "Sem valor oficial",
+        "message": "N?o use este c?lculo como orienta??o fiscal oficial.",
+        "code": "NON_OFFICIAL_RESULT",
+        "requiresHumanReview": true
+      }
+    ],
+    "timeline": [
+      {
+        "id": "evt-start",
+        "timestamp": "2026-03-24T10:00:00.000Z",
+        "kind": "simulation_started",
+        "message": "Simula??o mock iniciada."
+      },
+      {
+        "id": "evt-finished",
+        "timestamp": "2026-03-24T10:00:01.000Z",
+        "kind": "simulation_finished",
+        "message": "Simula??o encerrada com resultado parcial audit?vel."
+      }
+    ]
+  }
+}

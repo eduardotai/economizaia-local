@@ -1,0 +1,9 @@
+{
+  "id": "demo-profile",
+  "businessName": "Estúdio Local de Serviços",
+  "regime": "simples",
+  "monthlyRevenue": 18000,
+  "activityDescription": "Prestação de serviços recorrentes",
+  "city": "São Paulo",
+  "state": "SP"
+}
