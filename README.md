@@ -16,15 +16,15 @@ Este checkpoint adiciona uma interface simples de inspeção local para reforça
 - Integração leve com a home atual, sem backend remoto
 - Geração de auditoria e snapshots também no fluxo de simulação local
 
-### Repositórios locais e auditoria expandida
+### Relatório estruturado + exportação local inicial
 
-Este checkpoint reforça a camada de persistência local e a trilha de auditoria, mantendo o projeto explicitamente local-first:
+Este checkpoint adiciona a primeira versão do relatório final do usuário, ainda totalmente local-first e explicitamente mock/placeholder:
 
-- Repositórios locais tipados para perfis, documentos, ingestão documental, simulações, resultados, bundles e eventos de auditoria
-- Contratos de persistência mais claros com metadata de versão, timestamps e marcação `localOnly`
-- Snapshots locais para perfil, documento e simulação
-- Auditoria global coerente para ações principais do fluxo
-- Integração mínima no preview de simulação e no workspace documental
+- Relatório estruturado em pt-BR com resumo executivo, premissas, confiança, alertas/lacunas e rodapé com disclaimer
+- Tela/componente de relatório integrada ao fluxo atual de simulação
+- Exportação local inicial em HTML pronto para impressão
+- Caminho explícito de impressão/salvar em PDF do navegador como placeholder inicial
+- Persistência local básica do relatório e snapshot local adicional
 
 ### Onboarding anônimo + simulation workspace
 
@@ -147,6 +147,16 @@ Documentação curta deste checkpoint:
 
 Esses artefatos documentam o contrato expandido do motor, incluindo confidence bands, premissas, lacunas de dados, alertas, trilha de auditoria e recusa mock por insuficiência de dados.
 
+## Fluxo de relatório e exportação local atual
+
+1. Usuário conclui o onboarding anônimo e gera uma simulação local.
+2. O app monta um relatório estruturado em pt-BR com resumo executivo, premissas, confiança, alertas e lacunas.
+3. O relatório é salvo localmente no navegador como artefato próprio deste checkpoint.
+4. Um snapshot local adicional é criado para apoiar auditoria/revisão futura.
+5. A exportação inicial acontece por download de HTML pronto para impressão.
+6. O caminho de PDF neste checkpoint é explícito e indireto: usar a impressão do navegador para “Salvar em PDF”.
+7. Todo o conteúdo continua marcado como mock/placeholder e não oficial.
+
 ## Observações importantes
 
 - O PWA está configurado para produção via `next-pwa`.
@@ -190,6 +200,9 @@ O que já funciona neste starter:
 - Onboarding anônimo local-first com coleta mínima de perfil
 - Persistência local básica do onboarding/perfil
 - Workspace de simulação com premissas, confiança, cenários mock, alertas e lacunas
+- Relatório final inicial integrado ao fluxo de simulação
+- Persistência local básica de relatórios estruturados
+- Exportação local inicial em HTML e impressão via navegador
 - Integração do onboarding com o `mock-tax-rule-engine`
 - Painel local de inspeção para auditoria e snapshots persistidos
 - Upload inicial de documentos com processamento placeholder
