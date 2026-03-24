@@ -5,6 +5,7 @@ import type { PersistedUserReport, ReportPremiseItem, UserReport } from "@/model
 import type { SimulationPremise, SimulationResult } from "@/models/domain";
 import { activityTypeLabels, revenueRangeLabels, simulationPeriodLabels, userTypeLabels } from "@/lib/onboarding";
 import { createId, nowIso } from "@/lib/document-utils";
+import { buildExplanationContext } from "@/rag";
 
 const REPORT_STORAGE_KEY_PREFIX = "user_report";
 const REPORT_MOCK_VERSION = "mock-report-v0.1";
@@ -193,6 +194,31 @@ export function renderReportHtml(report: UserReport) {
         </div>
       </section>
 
+      <section class="section">
+        <h2>Contexto explicativo local</h2>
+        <div class="panel">
+          <p>${escapeHtml(report.explanation?.summary ?? "Contexto explicativo ainda não gerado.")}</p>
+          <p><strong>Evidências recuperadas:</strong> ${report.explanation?.evidenceCount ?? 0}</p>
+          <h3>Blocos de contexto</h3>
+          <ul>${
+            report.explanation?.blocks.length
+              ? report.explanation.blocks
+                  .map(
+                    (block) => `
+                      <li>
+                        <strong>${escapeHtml(block.title)}</strong><br />
+                        ${escapeHtml(block.summary)}
+                        ${block.explicitPlaceholder ? "<div><em>Marcado como mock/placeholder.</em></div>" : ""}
+                      </li>`,
+                  )
+                  .join("")
+              : "<li>Nenhum bloco de contexto disponível.</li>"
+          }</ul>
+          <h3>Próxima evolução técnica</h3>
+          <ul>${renderList(report.explanation?.nextEvolutionNotes ?? ["Sem notas adicionais."])}</ul>
+        </div>
+      </section>
+
       <footer>
         <div><strong>Disclaimer:</strong> ${escapeHtml(report.footer.disclaimer)}</div>
         <div><strong>Escopo:</strong> Persistência local neste dispositivo = ${report.footer.localOnly ? "sim" : "não"}.</div>
@@ -207,6 +233,17 @@ export function buildUserReport(params: { simulation: SimulationResult; profile:
   const { simulation, profile } = params;
   const now = nowIso();
   const reportId = createId(REPORT_STORAGE_KEY_PREFIX);
+
+  const explanationContext = buildExplanationContext({
+    simulationId: simulation.id,
+    query: [
+      simulation.summary.narrative,
+      simulation.summary.confidence.rationale,
+      ...simulation.audit.warnings.map((warning) => warning.title),
+      ...simulation.audit.missingData.map((gap) => gap.label),
+    ].join(" "),
+    tags: ["mock", "placeholder", "revisão humana", "rag local"],
+  });
 
   const report: UserReport = {
     id: reportId,
@@ -233,6 +270,19 @@ export function buildUserReport(params: { simulation: SimulationResult; profile:
     },
     alerts: simulation.audit.warnings,
     gaps: simulation.audit.missingData,
+    explanationContext,
+    explanation: {
+      summary: explanationContext.userFacingSummary,
+      explicitPlaceholder: true,
+      evidenceCount: explanationContext.retrieval.evidences.length,
+      blocks: explanationContext.blocks.map((block) => ({
+        id: block.id,
+        title: block.title,
+        summary: block.summary,
+        explicitPlaceholder: block.explicitPlaceholder,
+      })),
+      nextEvolutionNotes: explanationContext.nextEvolutionNotes,
+    },
     footer: {
       disclaimer:
         "Relatório mock/placeholder gerado localmente. Não constitui cálculo fiscal oficial, parecer tributário, recomendação contábil ou validação normativa.",

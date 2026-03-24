@@ -6,6 +6,16 @@ Starter funcional para um app **Next.js 15 + TypeScript + Tailwind + estilo shad
 
 ## Checkpoint atual
 
+### Scaffold inicial de RAG local e camada explicativa
+
+Este checkpoint adiciona a primeira base arquitetural para contexto explicativo local, ainda sem backend remoto e com tudo explicitamente marcado como mock/placeholder:
+
+- Tipos/contratos para documentos normativos locais, chunks, evidências de retrieval, resultado de retrieval e contexto explicativo
+- Índice local mock em memória com retrieval por palavras-chave
+- Integração leve com o fluxo de relatório para exibir “contexto explicativo” local
+- Preparação de contratos para evolução posterior com Transformers.js e WebLLM
+- Nenhum conteúdo normativo oficial embarcado neste estágio
+
 ### UI local de inspeção para auditoria e snapshots
 
 Este checkpoint adiciona uma interface simples de inspeção local para reforçar o debug manual e a confiança no fluxo local-first:
@@ -20,7 +30,7 @@ Este checkpoint adiciona uma interface simples de inspeção local para reforça
 
 Este checkpoint adiciona a primeira versão do relatório final do usuário, ainda totalmente local-first e explicitamente mock/placeholder:
 
-- Relatório estruturado em pt-BR com resumo executivo, premissas, confiança, alertas/lacunas e rodapé com disclaimer
+- Relatório estruturado em pt-BR com resumo executivo, premissas, confiança, alertas/lacunas, contexto explicativo mock e rodapé com disclaimer
 - Tela/componente de relatório integrada ao fluxo atual de simulação
 - Exportação local inicial em HTML pronto para impressão
 - Caminho explícito de impressão/salvar em PDF do navegador como placeholder inicial
@@ -61,6 +71,7 @@ Este checkpoint adiciona um fluxo inicial de entrada sem login e um workspace de
 - Workspace de simulação com cenários mock, confiança, lacunas e disclaimers
 - Pipeline documental local inicial com upload, persistência e auditoria
 - Placeholders explícitos para `pdf.js`, `Tesseract.js`, `Web Workers`, `RAG local` e `WebLLM`
+- Scaffold inicial de contexto explicativo local acoplado ao relatório
 
 ## Estrutura
 
@@ -155,7 +166,8 @@ Esses artefatos documentam o contrato expandido do motor, incluindo confidence b
 4. Um snapshot local adicional é criado para apoiar auditoria/revisão futura.
 5. A exportação inicial acontece por download de HTML pronto para impressão.
 6. O caminho de PDF neste checkpoint é explícito e indireto: usar a impressão do navegador para “Salvar em PDF”.
-7. Todo o conteúdo continua marcado como mock/placeholder e não oficial.
+7. O relatório também monta um contexto explicativo local mock com evidências recuperadas de um índice placeholder.
+8. Todo o conteúdo continua marcado como mock/placeholder e não oficial.
 
 ## Observações importantes
 
@@ -174,8 +186,8 @@ Esses artefatos documentam o contrato expandido do motor, incluindo confidence b
 2. Implementar workers reais para `pdf.js` e `Tesseract.js`.
 3. Criar revisão manual de entidades/documentos antes de qualquer uso em cálculo.
 4. Adicionar parser XML local mais estruturado.
-5. Criar indexação local de fontes normativas para RAG.
-6. Acoplar WebLLM somente como explicador do resultado estruturado.
+5. Evoluir o índice local mock para retrieval com embeddings no navegador.
+6. Acoplar WebLLM somente como explicador do resultado estruturado e das evidências recuperadas.
 
 ## Stack planejada
 
@@ -201,6 +213,7 @@ O que já funciona neste starter:
 - Persistência local básica do onboarding/perfil
 - Workspace de simulação com premissas, confiança, cenários mock, alertas e lacunas
 - Relatório final inicial integrado ao fluxo de simulação
+- Contexto explicativo local mock integrado ao relatório
 - Persistência local básica de relatórios estruturados
 - Exportação local inicial em HTML e impressão via navegador
 - Integração do onboarding com o `mock-tax-rule-engine`

@@ -202,6 +202,36 @@ export function ReportWorkspace({ profile, simulation, persistedReport, onReport
             </div>
           </div>
 
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-white">Contexto explicativo local</div>
+              <p className="mt-3 leading-6">{report.explanation?.summary ?? "Contexto explicativo ainda não gerado."}</p>
+              <p className="mt-2">Evidências recuperadas: {report.explanation?.evidenceCount ?? 0}</p>
+              <div className="mt-3 space-y-3">
+                {report.explanation?.blocks.length ? (
+                  report.explanation.blocks.map((block) => (
+                    <div key={block.id} className="rounded-2xl border border-border bg-muted/20 p-3">
+                      <div className="font-medium text-white">{block.title}</div>
+                      <div className="mt-1">{block.summary}</div>
+                      {block.explicitPlaceholder ? <div className="mt-1 text-amber-200">Marcado como mock/placeholder.</div> : null}
+                    </div>
+                  ))
+                ) : (
+                  <p>Nenhum bloco de contexto disponível.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
+              <div className="font-medium text-white">Evolução planejada</div>
+              <ul className="mt-3 list-disc space-y-2 pl-5">
+                {(report.explanation?.nextEvolutionNotes ?? []).map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
             <strong>Disclaimer:</strong> {report.footer.disclaimer}
           </div>

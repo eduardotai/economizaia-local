@@ -1,4 +1,5 @@
 import type { ConfidenceLevel, DataGap, SimulationAlert, SimulationPremise, SimulationResult } from "@/models/domain";
+import type { ExplanationContext } from "@/rag";
 
 export interface ReportPremiseItem {
   id: string;
@@ -26,6 +27,19 @@ export interface ReportFooter {
   localOnly: boolean;
 }
 
+export interface ReportExplanationSection {
+  summary: string;
+  explicitPlaceholder: boolean;
+  evidenceCount: number;
+  blocks: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    explicitPlaceholder: boolean;
+  }>;
+  nextEvolutionNotes: string[];
+}
+
 export interface UserReport {
   id: string;
   simulationId: string;
@@ -43,6 +57,8 @@ export interface UserReport {
   confidence: ReportConfidenceSection;
   alerts: SimulationAlert[];
   gaps: DataGap[];
+  explanationContext?: ExplanationContext;
+  explanation?: ReportExplanationSection;
   footer: ReportFooter;
   export: {
     htmlFileName: string;
