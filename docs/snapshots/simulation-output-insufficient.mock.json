@@ -1,52 +1,52 @@
 {
   "id": "sim-demo-profile-insufficient",
-  "createdAt": "2026-03-24T10:05:00.000Z",
+  "createdAt": "2026-03-24T18:12:00.000Z",
   "profileId": "demo-profile-insufficient",
-  "bundleId": "starter-bundle-local",
-  "bundleVersion": "0.2.0-mock",
+  "bundleId": "mvp-bundle-local-prototype",
+  "bundleVersion": "0.4.0-prototype-local",
   "status": "refused",
   "currentScenario": {
     "id": "scenario-refused-demo-profile-insufficient",
-    "label": "Simula??o n?o conclu?da (mock)",
+    "label": "Simulação não concluída (protótipo local)",
     "monthlyTaxEstimate": 0,
     "annualTaxEstimate": 0,
     "notes": [
-      "Placeholder t?cnico para representar recusa por dados insuficientes."
+      "Placeholder técnico para representar recusa conservadora do MVP por dados insuficientes ou revisão pendente."
     ],
     "confidence": {
       "level": "very_low",
       "score": 0.08,
       "label": "Muito baixa",
-      "rationale": "Dados essenciais ausentes impedem qualquer simula??o confi?vel.",
+      "rationale": "Dados essenciais ausentes ou revisão pendente impedem qualquer simulação confiável neste protótipo local.",
       "drivers": [
-        "Guardrail de insufici?ncia de dados acionado"
+        "Guardrail conservador do MVP acionado"
       ],
       "blockers": [
-        "Campos obrigat?rios ausentes"
+        "Campos obrigatórios ausentes ou não revisados"
       ],
-      "reviewRecommendation": "Solicitar revis?o humana antes de seguir."
+      "reviewRecommendation": "Solicitar revisão humana/local antes de seguir."
     },
     "placeholdersUsed": [
-      "refusal-scenario-placeholder"
+      "mvp-refusal-placeholder"
     ]
   },
   "summary": {
     "estimatedSavings": 0,
-    "estimatedSavingsLabel": "R$?0,00",
-    "narrative": "Simula??o recusada pelo guardrail mock. O objetivo ? demonstrar um comportamento conservador quando faltam dados essenciais.",
+    "estimatedSavingsLabel": "R$ 0,00",
+    "narrative": "Simulação recusada pelo guardrail conservador do MVP. O objetivo é demonstrar recusa explícita quando faltam dados essenciais ou quando ainda há necessidade de revisão humana.",
     "decisionStatus": "refused",
     "confidence": {
       "level": "very_low",
       "score": 0.08,
       "label": "Muito baixa",
-      "rationale": "Dados essenciais ausentes impedem qualquer simula??o confi?vel.",
+      "rationale": "Dados essenciais ausentes ou revisão pendente impedem qualquer simulação confiável neste protótipo local.",
       "drivers": [
-        "Guardrail de insufici?ncia de dados acionado"
+        "Guardrail conservador do MVP acionado"
       ],
       "blockers": [
-        "Campos obrigat?rios ausentes"
+        "Campos obrigatórios ausentes ou não revisados"
       ],
-      "reviewRecommendation": "Solicitar revis?o humana antes de seguir."
+      "reviewRecommendation": "Solicitar revisão humana/local antes de seguir."
     }
   },
   "audit": {
@@ -54,9 +54,9 @@
     "appliedRules": [
       {
         "ruleId": "guardrail-insufficient-data",
-        "title": "Recusa mock por insufici?ncia de dados",
+        "title": "Recusa por insuficiência de dados mínimos",
         "status": "refused",
-        "reason": "Campos m?nimos ausentes bloquearam a simula??o.",
+        "reason": "Campos mínimos ausentes bloquearam a simulação no recorte conservador do MVP.",
         "citations": []
       }
     ],
@@ -65,29 +65,29 @@
         "id": "gap-state",
         "field": "state",
         "label": "UF",
-        "description": "A jurisdi??o estadual n?o foi informada.",
+        "description": "A jurisdição estadual não foi informada.",
         "severity": "blocking",
         "blocking": true,
-        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
-        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+        "whyItMatters": "Sem esse dado, o motor não consegue sustentar um cenário auditável com segurança.",
+        "suggestedAction": "Coletar, revisar manualmente e confirmar a informação antes de concluir a análise."
       },
       {
         "id": "gap-monthlyRevenue",
         "field": "monthlyRevenue",
         "label": "Receita mensal",
-        "description": "Receita mensal ausente, inv?lida ou n?o positiva.",
+        "description": "Receita mensal ausente, inválida ou não positiva.",
         "severity": "blocking",
         "blocking": true,
-        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
-        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+        "whyItMatters": "Sem esse dado, o motor não consegue sustentar um cenário auditável com segurança.",
+        "suggestedAction": "Coletar, revisar manualmente e confirmar a informação antes de concluir a análise."
       }
     ],
     "warnings": [
       {
         "id": "alert-insufficient-data",
         "severity": "critical",
-        "title": "Dados insuficientes para concluir a an?lise",
-        "message": "O motor mock recusou a conclus?o para evitar um resultado com falsa apar?ncia oficial.",
+        "title": "Dados insuficientes para concluir a análise",
+        "message": "O motor local de protótipo recusou a conclusão para evitar um resultado com falsa aparência oficial.",
         "code": "INSUFFICIENT_DATA",
         "sourceRuleId": "guardrail-insufficient-data",
         "requiresHumanReview": true
@@ -96,9 +96,9 @@
     "timeline": [
       {
         "id": "evt-insufficient-data",
-        "timestamp": "2026-03-24T10:05:00.000Z",
+        "timestamp": "2026-03-24T18:12:00.000Z",
         "kind": "insufficient_data",
-        "message": "Guardrail mock acionado por insufici?ncia de dados.",
+        "message": "Guardrail conservador acionado por insuficiência de dados no MVP local.",
         "refs": [
           "state",
           "monthlyRevenue"
@@ -108,15 +108,15 @@
   },
   "refusal": {
     "reasonCode": "INSUFFICIENT_DATA",
-    "message": "A simula??o foi recusada pelo motor mock porque faltam dados m?nimos para um resultado audit?vel.",
+    "message": "A simulação foi recusada pelo bundle MVP local porque faltam dados mínimos para um resultado auditável e o protótipo não deve fingir cobertura tributária completa.",
     "missingFields": [
       "state",
       "monthlyRevenue"
     ],
     "nextSteps": [
-      "Preencher os campos obrigat?rios ausentes.",
-      "Revisar manualmente a jurisdi??o e a descri??o da atividade.",
-      "Executar nova simula??o somente ap?s complementar os dados."
+      "Preencher os campos obrigatórios ausentes.",
+      "Revisar manualmente a jurisdição, a atividade e o enquadramento informado.",
+      "Executar nova simulação apenas como demo local, nunca como orientação fiscal oficial."
     ]
   }
 }
