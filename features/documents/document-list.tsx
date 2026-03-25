@@ -373,14 +373,14 @@ function FieldSection({
                 <span className="text-xs text-muted-foreground">{field.note ?? "Campo revisável salvo localmente."}</span>
               </div>
 
-              {field.history.length > 0 ? (
+              {(field.history ?? []).length > 0 ? (
                 <div className="mt-3 rounded-2xl border border-border/70 bg-muted/20 p-3">
                   <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     <History className="h-3.5 w-3.5" />
                     Histórico local
                   </div>
                   <div className="mt-2 space-y-2 text-xs text-muted-foreground">
-                    {field.history.slice(-3).reverse().map((entry) => (
+                    {(field.history ?? []).slice(-3).reverse().map((entry) => (
                       <div key={entry.id} className="rounded-xl border border-border/60 bg-background/70 px-3 py-2">
                         <div className="font-medium text-foreground">{entry.action}</div>
                         <div className="mt-1">
