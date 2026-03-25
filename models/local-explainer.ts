@@ -22,6 +22,9 @@ export type LocalExplainerReasonCode =
   | "LIGHT_MODE_ONLY"
   | "USER_ACTION_REQUIRED"
   | "LOCAL_ONLY_DISABLED"
+  | "INSUFFICIENT_EVIDENCE"
+  | "MISSING_LOCAL_CONTEXT"
+  | "MISSING_HUMAN_REVIEW"
   | "UNKNOWN";
 
 export interface LocalExplainerPromptContract {
@@ -72,6 +75,40 @@ export interface LocalExplainerEvidenceItem {
   explicitPlaceholder: boolean;
 }
 
+export interface LocalExplainerEvidenceAnchor {
+  bundleVersion: string;
+  simulationStatus: string;
+  retrievalEvidenceCount: number;
+  retrievalBlockCount: number;
+  warningCount: number;
+  gapCount: number;
+  evidenceIds: string[];
+  explicitPlaceholder: boolean;
+}
+
+export interface LocalExplainerStructuredSection {
+  heading: string;
+  body: string[];
+}
+
+export interface LocalExplainerRefusal {
+  code: "INSUFFICIENT_EVIDENCE" | "MISSING_LOCAL_CONTEXT" | "MISSING_HUMAN_REVIEW";
+  title: string;
+  message: string;
+  missingItems: string[];
+  requiredActions: string[];
+  requiresHumanReview: boolean;
+  explicitPlaceholder: true;
+}
+
+export interface LocalExplainerStatusSummary {
+  modeLabel: string;
+  providerLabel: string;
+  readinessLabel: string;
+  behaviorLabel: string;
+  explicitPlaceholder: true;
+}
+
 export interface LocalExplainerResponse {
   id: string;
   createdAt: string;
@@ -82,9 +119,13 @@ export interface LocalExplainerResponse {
   title: string;
   summary: string;
   answer: string;
+  sections: LocalExplainerStructuredSection[];
   disclaimer: string;
   promptContract: LocalExplainerPromptContract;
   evidence: LocalExplainerEvidenceItem[];
+  evidenceAnchor: LocalExplainerEvidenceAnchor;
+  capabilityStatus: LocalExplainerStatusSummary;
+  refusal?: LocalExplainerRefusal;
   followUps: string[];
   explicitPlaceholder: boolean;
 }

@@ -72,9 +72,43 @@ export interface UserReport {
   sourceSimulation: Pick<SimulationResult, "bundleId" | "bundleVersion" | "status">;
 }
 
+export interface ReadinessSnapshotArtifact {
+  generatedAt: string;
+  status: string;
+  statusLabel: string;
+  summary: string;
+  checklist: Array<{
+    id: string;
+    label: string;
+    done: boolean;
+    detail: string;
+  }>;
+  blockers: Array<{
+    code: string;
+    title: string;
+    message: string;
+    nextSteps: string[];
+  }>;
+  nextSteps: string[];
+  evidence: {
+    flowModeLabel: string;
+    userTypeLabel: string;
+    activityTypeLabel: string;
+    periodLabel: string;
+    confidenceLabel: string;
+    bundleApprovalStatus: string;
+    bundleReviewStatus: string;
+    documentReviewPendingCount: number;
+    documentReviewConfirmedCount: number;
+    criticalMissingCount: number;
+    hasPersistedReport: boolean;
+  };
+}
+
 export interface PersistedUserReport {
   report: UserReport;
   renderedHtml: string;
+  readinessSnapshot?: ReadinessSnapshotArtifact;
 }
 
 export type ReportSourcePremise = Pick<SimulationPremise, "id" | "label" | "description" | "value" | "sourceRefs" | "explicitPlaceholder">;

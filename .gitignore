@@ -4,6 +4,9 @@ out/
 dist/
 coverage/
 
+public/sw.js
+public/workbox-*.js
+
 *.log
 *.tsbuildinfo
 
@@ -29,3 +32,15 @@ cache/
 *.key
 *.crt
 *.p12
+
+# Local Claude Code settings (machine-specific)
+.claude/
+
+# Local AI session logs
+.remember/
+
+# Internal working documents
+relatorio.md
+
+# Codex workspaces (embedded git repos)
+.codex-workspaces/

@@ -28,7 +28,7 @@ export interface DocumentPage {
   id: string;
   documentId: string;
   pageNumber: number;
-  source: "pdf_text" | "ocr_stub" | "image_stub" | "xml_placeholder";
+  source: "pdf_text" | "ocr_tesseract" | "ocr_stub" | "image_stub" | "xml_placeholder" | "xml_parser";
   extractedText: string;
   confidence?: number;
   warnings: string[];
@@ -39,7 +39,7 @@ export interface OCRJob {
   documentId: string;
   pageIds: string[];
   status: "queued" | "running" | "completed" | "failed";
-  engine: "tesseract_stub";
+  engine: "tesseract" | "tesseract_stub";
   createdAt: string;
   updatedAt: string;
   warnings: string[];
@@ -49,10 +49,10 @@ export interface ExtractedEntity {
   id: string;
   documentId: string;
   pageId?: string;
-  label: "supplier_name" | "document_number" | "issue_date" | "total_amount" | "note";
+  label: "supplier_name" | "document_number" | "issue_date" | "total_amount" | "cnpj_emitente" | "note";
   value: string;
   confidence: number;
-  source: "mock_pipeline";
+  source: "mock_pipeline" | "pdf_text_parser" | "ocr_tesseract" | "xml_parser";
   note: string;
 }
 
@@ -67,14 +67,30 @@ export interface ExtractedFieldCandidate {
   note: string;
 }
 
+export type ManualReviewFieldState = "needs_review" | "edited" | "confirmed";
+
+export interface ManualReviewHistoryEntry {
+  id: string;
+  createdAt: string;
+  actor: "pipeline_worker" | "usuario_local";
+  action: "extracted" | "edited" | "confirmed" | "bulk_confirmed";
+  previousValue: string;
+  nextValue: string;
+  note?: string;
+}
+
 export interface ManualReviewField {
   id: string;
   label: string;
   value: string;
+  originalValue: string;
   sourcePath?: string;
   reviewed: boolean;
+  required: boolean;
+  state: ManualReviewFieldState;
   updatedAt: string;
   note?: string;
+  history: ManualReviewHistoryEntry[];
 }
 
 export interface ManualReviewState {
@@ -84,6 +100,8 @@ export interface ManualReviewState {
   confirmed: boolean;
   fields: ManualReviewField[];
   notes: string[];
+  confirmedFieldCount: number;
+  totalFieldCount: number;
 }
 
 export interface DocumentAuditEntry {
@@ -91,12 +109,19 @@ export interface DocumentAuditEntry {
   documentId: string;
   step:
     | "document_registered"
+    | "worker_processing_started"
     | "type_detected"
     | "pdf_text_extracted_stub"
     | "ocr_enqueued_stub"
+    | "ocr_completed"
+    | "ocr_failed"
     | "entities_generated_mock"
+    | "field_review_updated"
+    | "field_review_confirmed"
     | "manual_review_required"
     | "manual_review_confirmed"
+    | "manual_review_reset"
+    | "worker_processing_completed"
     | "processing_completed"
     | "processing_failed";
   status: AuditStepStatus;
@@ -123,7 +148,7 @@ export interface IngestedDocument {
   manualReview: ManualReviewState;
   auditTrail: DocumentAuditEntry[];
   processingWarnings: string[];
-  placeholder: true;
+  placeholder: boolean;
 }
 
 export interface DocumentRegistrationInput {

@@ -1,203 +1,105 @@
 # EconomizaIA Local
 
-Starter funcional para um app **Next.js 15 + TypeScript + Tailwind + estilo shadcn/ui + PWA**, desenhado como base **local-first** para evoluir o produto EconomizaIA Local.
+**PWA 100% local-first e offline-first** para identificar oportunidades legais e conservadoras de economia tributaria no contexto da Reforma Tributaria brasileira (IBS/CBS 2026-2033).
 
-> **Importante:** este repositório inicial **não implementa regra fiscal oficial**. Os cálculos exibidos, a pipeline documental e a camada explicativa local são **mocks/placeholders técnicos** para validar arquitetura, UX e integração local.
+> **Aviso:** os resultados sao estimativas preliminares baseadas em dados declarados e no bundle de regras em revisao. Nao substitui analise de contador habilitado. **Revisao humana e obrigatoria** antes de qualquer uso pratico.
 
-## Checkpoint atual
+## Stack
 
-### Revisão manual obrigatória + modo rápido manual + regras versionadas
+| Camada | Tecnologia |
+|--------|-----------|
+| App shell | Next.js 15 (App Router) + React 19 + TypeScript |
+| UI | Tailwind CSS + shadcn/ui |
+| Persistencia | IndexedDB + localForage (100% local, zero backend) |
+| PDF / OCR | pdfjs-dist + Tesseract.js v6 via Web Workers + Comlink |
+| Rule engine | TypeScript puro — MEI, Simples Nacional (Anexos I-V), Lucro Presumido |
+| RAG local | Transformers.js (embeddings + retrieval no dispositivo) |
+| LLM local | WebLLM (Phi-3.5-mini via WebGPU) — apenas explica, nunca calcula |
+| PDF export | pdfmake |
+| PWA | next-pwa (offline-first em builds de producao) |
 
-Este checkpoint reorganiza a prioridade do produto para reduzir risco de falsa precisão fiscal:
+## Principios
 
-- **pdf.js priorizado** para PDF digital
-- **OCR/Tesseract apenas como fallback técnico**, explicitamente não confiável para cálculo fiscal
-- **Revisão/edição manual obrigatória** dos dados extraídos antes de qualquer uso futuro no rule engine
-- **Gate explícito** na UI bloqueando cálculo derivado de documento sem revisão manual confirmada
-- **Modo rápido manual** com entrada direta de:
-  - faturamento
-  - despesas
-  - regime atual
-  - atividade / CNAE
-  - período
-- **Settings locais** para alternar entre **modo leve** e **modo IA** (preparação de produto/UX)
-- **Rule bundle versionado** com contrato explícito de `version`, `hash` e `updatedAt`
-- **Aviso visível na UI** sobre a versão atual das regras e necessidade futura de atualização controlada
+- **Zero backend de dados** — nenhum dado fiscal ou documento sai do dispositivo
+- **Rule engine acima do LLM** — o motor de regras calcula; o LLM apenas explica
+- **Arquitetura auditavel** — premissas, regras aplicadas e trilha reproduzivel em toda sugestao
+- **Conservadorismo regulatorio** — na duvida, hipotese conservadora + recomendacao de validacao com contador
+- **UX de confianca** — sem promessas magicas; com clareza, limites e disclaimers
 
-> **Importante:** este checkpoint continua sendo **mock/placeholder**. Não há regra fiscal oficial, nem cálculo tributário validado por especialista.
-
-### O que mudou na prioridade documental
-
-1. PDF digital tenta leitura com `pdf.js` primeiro.
-2. OCR fica somente como fallback/plumbing técnico.
-3. Dados extraídos do documento não entram automaticamente em cálculo.
-4. O usuário precisa revisar/editar e **confirmar manualmente** os campos.
-5. Sem essa confirmação, o app mantém o fluxo documental **bloqueado para cálculo**.
-
-## O que já vem pronto
-
-- App Router com `app/layout.tsx` e `app/page.tsx`
-- Tailwind configurado
-- Componentes base de UI no estilo shadcn/ui (`Button`, `Card`, `Badge`)
-- Manifest PWA inicial
-- Estrutura de pastas para domínio, engine, storage, workers, RAG e modelos locais
-- Camada inicial de storage com `localForage`
-- Rule engine fake/local com trilha de auditoria
-- Onboarding anônimo local com persistência básica do perfil
-- Workspace de simulação com cenários mock, confiança, lacunas e disclaimers
-- Modo rápido manual integrado ao fluxo de simulação
-- Pipeline documental local com revisão/edit manual obrigatória
-- Bundle de regras mock versionado
-- Avisos explícitos de atualização futura das regras
-- Placeholders explícitos para `pdf.js`, `Tesseract.js`, `Web Workers`, `RAG local` e `WebLLM`
-
-## Estrutura
-
-```txt
-app/
-components/
-features/
-engine/
-db/
-workers/
-rag/
-models/
-lib/
-public/
-docs/
-```
-
-## Como rodar localmente
-
-### 1. Instalar dependências
+## Inicio rapido
 
 ```bash
 npm install
-```
-
-### 2. Rodar em desenvolvimento
-
-```bash
 npm run dev
 ```
 
-A aplicação deverá abrir em:
-
-```txt
-http://localhost:3000
-```
-
-### 3. Validar tipos
+Abra `http://localhost:3000`. Para build de producao com PWA:
 
 ```bash
-npm run typecheck
+npm run build && npm start
 ```
 
-### 4. Gerar build local
+## Fluxo de uso
+
+1. **Onboarding** — preencha perfil, faturamento, regime, atividade e periodo
+2. **Consentimentos** — aceite local-only e mock awareness
+3. **Simulacao** — valide prontidao e gere a leitura local (cenarios MEI / Simples / Lucro Presumido)
+4. **Documentos** — envie PDFs, imagens ou XMLs; revise campos extraidos e confirme manualmente
+5. **Relatorio** — gere o relatorio auditavel com gate de prontidao, exporte HTML ou PDF
+6. **Exportacao para contador** — baixe JSON ou CSV estruturado para revisao profissional
+7. **Chat local** — faca perguntas sobre a simulacao (WebLLM ou modo leve)
+
+## Comandos
 
 ```bash
-npm run build
-npm start
+npm run dev              # Dev server com Turbopack
+npm run build            # Build de producao
+npm run lint             # ESLint
+npm run typecheck        # TypeScript (sem emit)
+npm run test:manual-first    # Testes de readiness + reporting + HTML snapshot
+npm run test:readiness       # Readiness gate + operational readiness
+npm run test:update-snapshots  # Regenerar snapshot HTML
 ```
 
-## Fluxo de simulação atual
+## Rule Engine
 
-### Modo rápido manual
+O motor tributario real (`engine/real-tax-rule-engine.ts`) calcula cenarios deterministicos:
 
-1. Usuário escolhe o fluxo **Modo rápido manual**.
-2. Informa manualmente faturamento, despesas, regime atual, atividade/CNAE e período.
-3. O perfil é salvo localmente no navegador.
-4. O app usa o `mock-tax-rule-engine` apenas para validar o contrato e a UX.
-5. A UI mostra bundle/versionamento, cenários mock, confiança, alertas e disclaimers.
+- **MEI**: DAS = 5% salario minimo + ICMS/ISS. Limite R$ 81.000/ano
+- **Simples Nacional**: Anexos I-V com aliquotas efetivas por faixa. Fator R (28%) determina Anexo III vs V
+- **Lucro Presumido**: IRPJ 15% + adicional, CSLL 9%, PIS 0,65%, COFINS 3%, ISS ~3%
 
-### Fluxo com documentos
+Bundle 2026 com citacoes legais (LC 123/2006, CGSN 140/2018, RIR/2018). Status: `review_required` — todas as regras `draft`.
 
-1. Usuário envia PDF, imagem ou XML.
-2. O app registra o arquivo no storage local do navegador.
-3. PDFs digitais usam `pdf.js` como primeira tentativa.
-4. OCR aparece só como fallback técnico/stub.
-5. O documento termina em estado de **revisão manual obrigatória**.
-6. O usuário revisa/edita os campos extraídos.
-7. Só após confirmação manual o documento fica marcado como apto para um cálculo futuro.
-8. Antes disso, a UI exibe bloqueio explícito do rule engine.
+## IA local (WebGPU)
 
-## Contrato de bundle de regras versionado
+A camada de IA e **explicativa e opcional**:
 
-O bundle local mock agora carrega, no mínimo:
+- Requer **Chrome 113+** ou **Edge 113+** (WebGPU)
+- Modelo Phi-3.5-mini (~2GB) baixado e executado no dispositivo
+- Prompt com politica anti-alucinacao: nunca inventa aliquotas ou orientacao fiscal
+- Fallback claro quando WebGPU nao esta disponivel — app funciona normalmente em modo leve
 
-- `version`
-- `hash`
-- `updatedAt`
+## Seguranca e gates
 
-Exemplo conceitual:
+- **Readiness gate** bloqueia simulacao quando consents, campos criticos ou revisao documental estao pendentes
+- **Operational readiness** avalia confiabilidade (fragil / demonstravel / confiavel) por snapshots, auditoria e coerencia
+- **Recusa controlada** do LLM quando faltam evidencias locais
+- **Export auditavel** com disclaimer, premissas, regras e snapshot do gate
 
-```ts
-{
-  version: "0.3.0-mock",
-  hash: "mock-sha256-manual-review-required-2026-03-24",
-  updatedAt: "2026-03-24T13:45:00.000Z"
-}
-```
+## Exportacao para contador
 
-> Esses valores ainda são **mock/placeholders**, mas o contrato foi preparado para atualização futura e aviso de versão mais nova.
+Dois formatos disponiveis no workspace do relatorio:
 
-## Limites atuais
+- **JSON** (`economizaia-contador-YYYY-MM-DD.json`) — pacote estruturado com perfil, simulacao, documentos e metadados
+- **CSV** (`economizaia-contador-YYYY-MM-DD.csv`) — planilha com secoes de perfil, resultado, premissas, lacunas, alertas e documentos
 
-- Sem backend remoto: todo o processamento continua local-first no navegador.
-- `pdf.js` já está conectado, mas ainda não cobre bem PDFs escaneados, criptografados ou semanticamente ruins.
-- `Tesseract.js` está isolado via adapter/plumbing, porém o OCR real ainda segue stub e não deve ser tratado como confiável para cálculo fiscal.
-- XML recebe parsing estrutural genérico/local, mas continua sem extração oficial de NFe/NFS-e/NFC-e.
-- Campos documentais continuam sendo sugestões heurísticas/placeholders auditáveis.
-- A revisão manual é obrigatória exatamente para evitar uso indevido dessas sugestões.
-- Não há regra tributária oficial nem cálculo fiscal real neste checkpoint.
+Nenhum dado sai do dispositivo — o arquivo e criado e baixado localmente.
 
-## Próximos passos sugeridos
+## Arquitetura
 
-1. Persistir settings de produto mais completos para modo leve vs modo IA.
-2. Evoluir a revisão manual com estados por campo, histórico e diffs.
-3. Criar integração futura entre documentos revisados e input estruturado do rule engine.
-4. Substituir o bundle mock por pacote normativo versionado revisado por especialista.
-5. Implementar política de update check para bundles locais.
-6. Mover `pdf.js` e OCR real para workers dedicados quando a maturidade do fluxo permitir.
+Detalhes completos em [ARCHITECTURE.md](ARCHITECTURE.md). Backlog tecnico em [BACKLOG.md](BACKLOG.md).
 
-## Stack planejada
+## Licenca
 
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS
-- localForage / IndexedDB
-- pdf.js
-- Tesseract.js
-- Web Workers
-- Transformers.js
-- WebLLM
-
-## Estado atual
-
-O que já funciona neste starter:
-
-- Renderização da home em português brasileiro
-- Layout base com identidade visual inicial
-- Onboarding anônimo local-first com coleta mínima de perfil
-- Settings locais de modo leve / modo IA
-- Modo rápido manual integrado ao workspace
-- Persistência local básica do onboarding/perfil
-- Workspace de simulação com premissas, confiança, cenários mock, alertas e lacunas
-- Exibição da versão/hash/data do bundle mock
-- Upload inicial de documentos com processamento local
-- Revisão/edit manual obrigatória de campos extraídos
-- Bloqueio explícito do rule engine sem revisão manual confirmada
-- Persistência local de documentos ingeridos e auditoria básica
-
-O que ainda está como placeholder:
-
-- OCR real confiável
-- Leitura robusta de PDF escaneado
-- Parser XML completo
-- RAG real com embeddings
-- WebLLM real
-- Streaming local do explainer
-- Regras tributárias oficiais
-- Cálculo fiscal real
-- Atualização automática/segura de bundles de regras
+MIT

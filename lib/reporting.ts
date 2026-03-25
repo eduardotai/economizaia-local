@@ -1,7 +1,7 @@
 import { localDb } from "@/db/local-db";
 import { formatCurrency } from "@/engine/types";
 import type { AnonymousOnboardingProfile } from "@/models/onboarding";
-import type { PersistedUserReport, ReportPremiseItem, UserReport } from "@/models/report";
+import type { PersistedUserReport, ReadinessSnapshotArtifact, ReportPremiseItem, UserReport } from "@/models/report";
 import type { SimulationPremise, SimulationResult } from "@/models/domain";
 import { activityTypeLabels, revenueRangeLabels, simulationPeriodLabels, userTypeLabels } from "@/lib/onboarding";
 import { createId, nowIso } from "@/lib/document-utils";
@@ -9,7 +9,7 @@ import { explainWithLocalLlm, getLocalExplainerCapability, createLocalExplainerC
 import { buildExplanationContext } from "@/rag";
 
 const REPORT_STORAGE_KEY_PREFIX = "user_report";
-const REPORT_MOCK_VERSION = "mock-report-v0.1";
+const REPORT_MOCK_VERSION = "mock-report-v0.2";
 
 function premiseValueToLabel(value: SimulationPremise["value"]) {
   if (typeof value === "number") return String(value);
@@ -91,7 +91,71 @@ function renderList(items: string[]) {
   return items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 }
 
-export function renderReportHtml(report: UserReport) {
+function renderReadinessSnapshot(readinessSnapshot?: ReadinessSnapshotArtifact) {
+  if (!readinessSnapshot) {
+    return `
+      <section class="section">
+        <h2>Gate de prontidão</h2>
+        <div class="panel">
+          <p>Nenhum snapshot de prontidão foi anexado a este relatório.</p>
+        </div>
+      </section>`;
+  }
+
+  const checklistItems = readinessSnapshot.checklist
+    .map(
+      (item) => `
+        <li>
+          <strong>${escapeHtml(item.done ? "OK" : "Pendente")}: ${escapeHtml(item.label)}</strong><br />
+          ${escapeHtml(item.detail)}
+        </li>`,
+    )
+    .join("");
+
+  const blockerItems = readinessSnapshot.blockers.length
+    ? readinessSnapshot.blockers
+        .map(
+          (blocker) => `
+            <li>
+              <strong>${escapeHtml(blocker.title)}</strong> (${escapeHtml(blocker.code)})<br />
+              ${escapeHtml(blocker.message)}
+              <div><em>Próximos passos:</em> ${escapeHtml(blocker.nextSteps.join(" • "))}</div>
+            </li>`,
+        )
+        .join("")
+    : "<li>Nenhum bloqueio registrado neste checkpoint.</li>";
+
+  return `
+    <section class="section">
+      <h2>Gate de prontidão</h2>
+      <div class="panel">
+        <p><strong>Status:</strong> ${escapeHtml(readinessSnapshot.statusLabel)} (${escapeHtml(readinessSnapshot.status)})</p>
+        <p>${escapeHtml(readinessSnapshot.summary)}</p>
+        <p><strong>Gerado em:</strong> ${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(readinessSnapshot.generatedAt)))}</p>
+        <h3>Checklist</h3>
+        <ul>${checklistItems}</ul>
+        <h3>Bloqueios</h3>
+        <ul>${blockerItems}</ul>
+        <h3>Evidências operacionais</h3>
+        <ul>
+          <li><strong>Fluxo:</strong> ${escapeHtml(readinessSnapshot.evidence.flowModeLabel)}</li>
+          <li><strong>Tipo de usuário:</strong> ${escapeHtml(readinessSnapshot.evidence.userTypeLabel)}</li>
+          <li><strong>Atividade:</strong> ${escapeHtml(readinessSnapshot.evidence.activityTypeLabel)}</li>
+          <li><strong>Período:</strong> ${escapeHtml(readinessSnapshot.evidence.periodLabel)}</li>
+          <li><strong>Confiança:</strong> ${escapeHtml(readinessSnapshot.evidence.confidenceLabel)}</li>
+          <li><strong>Bundle:</strong> ${escapeHtml(readinessSnapshot.evidence.bundleReviewStatus)} / ${escapeHtml(readinessSnapshot.evidence.bundleApprovalStatus)}</li>
+          <li><strong>Documentos revisados:</strong> ${readinessSnapshot.evidence.documentReviewConfirmedCount}</li>
+          <li><strong>Documentos pendentes:</strong> ${readinessSnapshot.evidence.documentReviewPendingCount}</li>
+          <li><strong>Lacunas críticas:</strong> ${readinessSnapshot.evidence.criticalMissingCount}</li>
+          <li><strong>Relatório prévio persistido:</strong> ${readinessSnapshot.evidence.hasPersistedReport ? "sim" : "não"}</li>
+        </ul>
+        <h3>Próximos passos</h3>
+        <ul>${renderList(readinessSnapshot.nextSteps)}</ul>
+      </div>
+    </section>`;
+}
+
+export function renderReportHtml(report: UserReport, readinessSnapshot?: ReadinessSnapshotArtifact) {
   const premiseItems = report.premises
     .map(
       (premise) => `
@@ -195,6 +259,8 @@ export function renderReportHtml(report: UserReport) {
         </div>
       </section>
 
+      ${renderReadinessSnapshot(readinessSnapshot)}
+
       <section class="section">
         <h2>Contexto explicativo local</h2>
         <div class="panel">
@@ -225,10 +291,39 @@ export function renderReportHtml(report: UserReport) {
             <li>${escapeHtml(report.localExplainerCapability?.detail ?? "Capability ainda não registrada.")}</li>
           </ul>
           <p><strong>Privacidade:</strong> chain-of-thought é interno/privado. O contexto explicativo futuro deve vir de RAG local.</p>
-          <h3>Resposta local mock</h3>
-          <p>${escapeHtml(report.localExplainerResponse?.answer ?? "Nenhuma resposta local gerada.")}</p>
+          <h3>Resposta local estruturada</h3>
+          <p>${escapeHtml(report.localExplainerResponse?.summary ?? "Nenhuma resposta local gerada.")}</p>
+          <p><strong>Status de capability:</strong> ${escapeHtml(report.localExplainerResponse?.capabilityStatus.readinessLabel ?? "N/A")} · ${escapeHtml(report.localExplainerResponse?.capabilityStatus.behaviorLabel ?? "N/A")}</p>
+          <p><strong>Âncora de evidência:</strong> bundle ${escapeHtml(report.localExplainerResponse?.evidenceAnchor.bundleVersion ?? "N/A")} · evidências ${report.localExplainerResponse?.evidenceAnchor.retrievalEvidenceCount ?? 0} · alertas ${report.localExplainerResponse?.evidenceAnchor.warningCount ?? 0} · lacunas ${report.localExplainerResponse?.evidenceAnchor.gapCount ?? 0}</p>
           <p><strong>Disclaimer do explainer:</strong> ${escapeHtml(report.localExplainerResponse?.disclaimer ?? "Sem disclaimer adicional.")}</p>
           <p><strong>Prompt scaffold:</strong> ${escapeHtml(report.localExplainerResponse?.promptContract.scaffoldPrompt ?? "Não disponível.")}</p>
+          <h3>Seções estruturadas</h3>
+          <ul>${
+            report.localExplainerResponse?.sections.length
+              ? report.localExplainerResponse.sections
+                  .map(
+                    (section) => `
+                      <li>
+                        <strong>${escapeHtml(section.heading)}</strong>
+                        <ul>${renderList(section.body)}</ul>
+                      </li>`,
+                  )
+                  .join("")
+              : "<li>Nenhuma seção estruturada disponível.</li>"
+          }</ul>
+          ${
+            report.localExplainerResponse?.refusal
+              ? `<h3>Recusa controlada</h3>
+                 <div class="panel">
+                   <p><strong>${escapeHtml(report.localExplainerResponse.refusal.title)}</strong></p>
+                   <p>${escapeHtml(report.localExplainerResponse.refusal.message)}</p>
+                   <p><strong>Itens faltantes:</strong></p>
+                   <ul>${renderList(report.localExplainerResponse.refusal.missingItems)}</ul>
+                   <p><strong>Ações requeridas:</strong></p>
+                   <ul>${renderList(report.localExplainerResponse.refusal.requiredActions)}</ul>
+                 </div>`
+              : ""
+          }
           <h3>Chat placeholder</h3>
           <ul>${
             report.localExplainerChat?.turns.length
@@ -261,12 +356,16 @@ export function renderReportHtml(report: UserReport) {
 </html>`;
 }
 
-export async function buildUserReport(params: { simulation: SimulationResult; profile: AnonymousOnboardingProfile }): Promise<PersistedUserReport> {
-  const { simulation, profile } = params;
+export async function buildUserReport(params: {
+  simulation: SimulationResult;
+  profile: AnonymousOnboardingProfile;
+  readinessSnapshot?: ReadinessSnapshotArtifact;
+}): Promise<PersistedUserReport> {
+  const { simulation, profile, readinessSnapshot } = params;
   const now = nowIso();
   const reportId = createId(REPORT_STORAGE_KEY_PREFIX);
 
-  const explanationContext = buildExplanationContext({
+  const explanationContext = await buildExplanationContext({
     simulationId: simulation.id,
     reportId,
     query: [
@@ -275,7 +374,7 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
       ...simulation.audit.warnings.map((warning) => warning.title),
       ...simulation.audit.missingData.map((gap) => gap.label),
     ].join(" "),
-    tags: ["mock", "placeholder", "revisão humana", "rag local"],
+    tags: ["mock", "placeholder", "revisão humana", "rag local", "bundle local"],
   });
 
   const localExplainerCapability = getLocalExplainerCapability("light");
@@ -313,15 +412,15 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
     title: "Relatório final inicial do usuário (mock)",
     createdAt: now,
     updatedAt: now,
+    localExplainerCapability,
+    localExplainerResponse,
+    localExplainerChat,
     summary: {
       executive: buildExecutiveSummary(simulation, profile),
       estimatedSavingsLabel: simulation.summary.estimatedSavingsLabel || formatCurrency(simulation.summary.estimatedSavings),
       decisionStatus: simulation.summary.decisionStatus,
       scenarioLabel: simulation.currentScenario.label,
     },
-    localExplainerCapability,
-    localExplainerResponse,
-    localExplainerChat,
     premises: mapPremises(simulation, profile),
     confidence: {
       level: simulation.summary.confidence.level,
@@ -357,7 +456,7 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
     export: {
       htmlFileName: `economizaia-relatorio-${simulation.id}.html`,
       printReady: true,
-      placeholderPdf: true,
+      placeholderPdf: false,
     },
     sourceSimulation: {
       bundleId: simulation.bundleId,
@@ -368,7 +467,8 @@ export async function buildUserReport(params: { simulation: SimulationResult; pr
 
   return {
     report,
-    renderedHtml: renderReportHtml(report),
+    renderedHtml: renderReportHtml(report, readinessSnapshot),
+    readinessSnapshot,
   };
 }
 

@@ -1,87 +1,88 @@
 {
   "id": "sim-demo-profile",
-  "createdAt": "2026-03-24T10:00:00.000Z",
+  "createdAt": "2026-03-24T18:10:00.000Z",
   "profileId": "demo-profile",
-  "bundleId": "starter-bundle-local",
-  "bundleVersion": "0.2.0-mock",
+  "bundleId": "mvp-bundle-local-prototype",
+  "bundleVersion": "0.4.0-prototype-local",
   "status": "partial",
   "currentScenario": {
-    "id": "cenario-atual-mock",
-    "label": "Cen?rio atual (mock)",
+    "id": "cenario-atual-prototype-local",
+    "label": "Cenário atual (protótipo local)",
     "monthlyTaxEstimate": 2160,
     "annualTaxEstimate": 25920,
     "notes": [
-      "Estimativa fake para validar o fluxo do starter."
+      "Estimativa artificial de demo para validar o fluxo do MVP local."
     ],
     "confidence": {
       "level": "low",
       "score": 0.34,
       "label": "Baixa",
-      "rationale": "Simula??o propositalmente mock, ?til para testar fluxo mas n?o para decis?o fiscal real.",
+      "rationale": "Simulação propositalmente artificial e local, útil para validar fluxo e auditoria, mas não para decisão fiscal real.",
       "drivers": [
         "Receita mensal declarada",
         "Regime informado",
-        "Compara??o determin?stica local"
+        "Comparação determinística local e prototípica"
       ],
       "blockers": [
-        "Aus?ncia de regra normativa oficial",
-        "Depend?ncia de placeholders"
+        "Ausência de regra normativa oficial",
+        "Dependência de placeholders de demo"
       ],
-      "reviewRecommendation": "Usar somente para testes e demonstra??es internas."
+      "reviewRecommendation": "Usar somente para testes internos, demonstração controlada e validação de UX."
     },
     "placeholdersUsed": [
-      "comparison-rate-placeholder",
-      "regime-evaluation-placeholder"
+      "prototype-comparison-rate-placeholder",
+      "prototype-regime-evaluation-placeholder"
     ]
   },
   "suggestedScenario": {
-    "id": "cenario-sugerido-mock",
-    "label": "Cen?rio alternativo (mock)",
+    "id": "cenario-sugerido-prototype-local",
+    "label": "Cenário alternativo (protótipo local)",
     "monthlyTaxEstimate": 1890,
     "annualTaxEstimate": 22680,
     "notes": [
-      "Compara??o simulada local, sem car?ter oficial."
+      "Comparação simulada local e auditável, sem caráter oficial."
     ],
     "confidence": {
       "level": "low",
       "score": 0.34,
       "label": "Baixa",
-      "rationale": "Simula??o propositalmente mock, ?til para testar fluxo mas n?o para decis?o fiscal real.",
+      "rationale": "Simulação propositalmente artificial e local, útil para validar fluxo e auditoria, mas não para decisão fiscal real.",
       "drivers": [
         "Receita mensal declarada",
         "Regime informado",
-        "Compara??o determin?stica local"
+        "Comparação determinística local e prototípica"
       ],
       "blockers": [
-        "Aus?ncia de regra normativa oficial",
-        "Depend?ncia de placeholders"
+        "Ausência de regra normativa oficial",
+        "Dependência de placeholders de demo"
       ],
-      "reviewRecommendation": "Usar somente para testes e demonstra??es internas."
+      "reviewRecommendation": "Usar somente para testes internos, demonstração controlada e validação de UX."
     },
     "placeholdersUsed": [
-      "comparison-rate-placeholder",
-      "regime-evaluation-placeholder"
+      "prototype-comparison-rate-placeholder",
+      "prototype-regime-evaluation-placeholder"
     ]
   },
   "summary": {
     "estimatedSavings": 270,
-    "estimatedSavingsLabel": "R$?270,00/m?s",
-    "narrative": "Resultado gerado por simula??o local fake para comprovar a integra??o entre dom?nio, engine e UI. Antes de uso real, substitua por regras validadas por especialista fiscal.",
+    "estimatedSavingsLabel": "R$ 270,00/mês",
+    "narrative": "Resultado gerado por bundle MVP local/protótipo para demonstrar integração entre domínio, engine, auditoria e UI. Não representa regra fiscal oficial e exige revisão humana antes de qualquer decisão real.",
     "decisionStatus": "completed_with_gaps",
     "confidence": {
       "level": "low",
       "score": 0.36,
       "label": "Baixa",
-      "rationale": "A sa?da ? ?til para testes de contrato, mas depende de premissas placeholder e n?o expressa regra oficial.",
+      "rationale": "A saída é útil para testes de contrato e trilha auditável, mas depende de percentuais demo e recorte estreito do MVP.",
       "drivers": [
-        "Bundle versionado",
-        "Premissas expl?citas",
-        "Trilha audit?vel"
+        "Bundle versionado e auditável",
+        "Metadados explícitos de revisão",
+        "Premissas e guardrails visíveis"
       ],
       "blockers": [
-        "Sem base normativa oficial consolidada"
+        "Sem base normativa oficial consolidada",
+        "Comparação artificial de demo"
       ],
-      "reviewRecommendation": "N?o usar em produ??o regulat?ria sem revis?o especializada."
+      "reviewRecommendation": "Não usar em produção regulatória; exigir validação especializada."
     }
   },
   "audit": {
@@ -89,7 +90,7 @@
       {
         "id": "premise-monthly-revenue",
         "label": "Receita mensal declarada",
-        "description": "Receita mensal informada pelo usu?rio ao iniciar a simula??o.",
+        "description": "Receita mensal informada pelo usuário ao iniciar a simulação demo.",
         "kind": "declared_by_user",
         "value": 18000,
         "sourceRefs": [
@@ -99,9 +100,9 @@
           "level": "moderate",
           "score": 0.6,
           "label": "Moderada",
-          "rationale": "Depende de declara??o manual do usu?rio, sem documento comprobat?rio neste starter.",
+          "rationale": "Depende de declaração manual do usuário, sem documento comprobatório neste protótipo.",
           "drivers": [
-            "Valor informado: R$?18.000,00"
+            "Valor informado: R$ 18.000,00"
           ]
         },
         "explicitPlaceholder": false
@@ -109,15 +110,17 @@
     ],
     "appliedRules": [
       {
-        "ruleId": "placeholder-regime-comparison",
-        "title": "Compara??o inicial de cen?rios",
+        "ruleId": "prototype-local-scenario-comparison",
+        "title": "Comparação artificial de cenários locais",
         "status": "applied",
-        "reason": "Regra mock aplicada para comparar dois cen?rios artificiais e exercitar a auditoria.",
+        "reason": "Regra de demo aplicada para comparar dois cenários artificiais e exercitar a auditoria do MVP local.",
         "citations": [
           {
-            "sourceId": "architecture-doc",
-            "title": "ARCHITECTURE.md",
-            "note": "Refer?ncia interna de arquitetura, n?o normativa."
+            "sourceId": "demo-prototype-note",
+            "title": "Nota de recorte MVP local",
+            "article": "demo-1",
+            "excerpt": "Percentuais e cenários abaixo são artificiais e existem apenas para demonstrar contrato, auditoria e UX.",
+            "note": "Exemplo explícito de placeholder sem valor legal."
           }
         ]
       }
@@ -127,35 +130,35 @@
         "id": "gap-officialNormativeBasis",
         "field": "officialNormativeBasis",
         "label": "Base normativa oficial consolidada",
-        "description": "Este starter ainda n?o possui pacote normativo revisado por especialista.",
+        "description": "Este bundle MVP não possui pacote normativo oficial revisado por especialista; cobre apenas demo local auditável.",
         "severity": "medium",
         "blocking": false,
-        "whyItMatters": "Sem esse dado, o motor n?o consegue sustentar um cen?rio audit?vel com seguran?a.",
-        "suggestedAction": "Coletar ou revisar manualmente a informa??o antes de concluir a an?lise."
+        "whyItMatters": "Sem esse dado, o motor não consegue sustentar um cenário auditável com segurança.",
+        "suggestedAction": "Coletar, revisar manualmente e confirmar a informação antes de concluir a análise."
       }
     ],
     "warnings": [
       {
-        "id": "alert-non-official",
+        "id": "alert-prototype-local",
         "severity": "critical",
-        "title": "Sem valor oficial",
-        "message": "N?o use este c?lculo como orienta??o fiscal oficial.",
-        "code": "NON_OFFICIAL_RESULT",
+        "title": "Protótipo local sem valor oficial",
+        "message": "Não use este cálculo como orientação fiscal oficial; trata-se de demo local auditável.",
+        "code": "NON_OFFICIAL_PROTOTYPE_RESULT",
         "requiresHumanReview": true
       }
     ],
     "timeline": [
       {
         "id": "evt-start",
-        "timestamp": "2026-03-24T10:00:00.000Z",
+        "timestamp": "2026-03-24T18:10:00.000Z",
         "kind": "simulation_started",
-        "message": "Simula??o mock iniciada."
+        "message": "Simulação do bundle MVP local iniciada."
       },
       {
         "id": "evt-finished",
-        "timestamp": "2026-03-24T10:00:01.000Z",
+        "timestamp": "2026-03-24T18:10:01.000Z",
         "kind": "simulation_finished",
-        "message": "Simula??o encerrada com resultado parcial audit?vel."
+        "message": "Simulação encerrada com resultado parcial auditável de demo local."
       }
     ]
   }

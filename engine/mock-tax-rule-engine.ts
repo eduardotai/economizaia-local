@@ -33,27 +33,27 @@ function buildGap(field: string, label: string, description: string, blocking = 
     severity: blocking ? "blocking" : "medium",
     blocking,
     whyItMatters: "Sem esse dado, o motor não consegue sustentar um cenário auditável com segurança.",
-    suggestedAction: "Coletar ou revisar manualmente a informação antes de concluir a análise.",
+    suggestedAction: "Coletar, revisar manualmente e confirmar a informação antes de concluir a análise.",
   };
 }
 
 function buildRefusalScenario(profileId: string): SimulationScenario {
   return {
     id: `scenario-refused-${profileId}`,
-    label: "Simulação não concluída (mock)",
+    label: "Simulação não concluída (protótipo local)",
     monthlyTaxEstimate: 0,
     annualTaxEstimate: 0,
-    notes: ["Placeholder técnico para representar recusa por dados insuficientes."],
+    notes: ["Placeholder técnico para representar recusa conservadora do MVP por dados insuficientes ou revisão pendente."],
     confidence: buildConfidenceBand({
       level: "very_low",
       score: 0.08,
       label: "Muito baixa",
-      rationale: "Dados essenciais ausentes impedem qualquer simulação confiável.",
-      drivers: ["Guardrail de insuficiência de dados acionado"],
-      blockers: ["Campos obrigatórios ausentes"],
-      reviewRecommendation: "Solicitar revisão humana antes de seguir.",
+      rationale: "Dados essenciais ausentes ou revisão pendente impedem qualquer simulação confiável neste protótipo local.",
+      drivers: ["Guardrail conservador do MVP acionado"],
+      blockers: ["Campos obrigatórios ausentes ou não revisados"],
+      reviewRecommendation: "Solicitar revisão humana/local antes de seguir.",
     }),
-    placeholdersUsed: ["refusal-scenario-placeholder"],
+    placeholdersUsed: ["mvp-refusal-placeholder"],
   };
 }
 
@@ -73,12 +73,12 @@ function buildSuccessfulScenario(
       level: "low",
       score: 0.34,
       label: "Baixa",
-      rationale: "Simulação propositalmente mock, útil para testar fluxo mas não para decisão fiscal real.",
-      drivers: ["Receita mensal declarada", "Regime informado", "Comparação determinística local"],
-      blockers: ["Ausência de regra normativa oficial", "Dependência de placeholders"],
-      reviewRecommendation: "Usar somente para testes e demonstrações internas.",
+      rationale: "Simulação propositalmente artificial e local, útil para validar fluxo e auditoria, mas não para decisão fiscal real.",
+      drivers: ["Receita mensal declarada", "Regime informado", "Comparação determinística local e prototípica"],
+      blockers: ["Ausência de regra normativa oficial", "Dependência de placeholders de demo"],
+      reviewRecommendation: "Usar somente para testes internos, demonstração controlada e validação de UX.",
     }),
-    placeholdersUsed: ["comparison-rate-placeholder", "regime-evaluation-placeholder"],
+    placeholdersUsed: ["prototype-comparison-rate-placeholder", "prototype-regime-evaluation-placeholder"],
   };
 }
 
@@ -86,6 +86,7 @@ class MockTaxRuleEngine implements TaxRuleEngine {
   bundle = starterRuleBundle;
 
   simulate(profile: TaxpayerProfile): SimulationResult {
+    const now = new Date().toISOString();
     const missingData: DataGap[] = [];
 
     if (!profile.activityDescription?.trim()) {
@@ -100,7 +101,11 @@ class MockTaxRuleEngine implements TaxRuleEngine {
       missingData.push(buildGap("monthlyRevenue", "Receita mensal", "Receita mensal ausente, inválida ou não positiva."));
     }
 
+    const reviewRequiredRule = this.bundle.rules.find((rule) => rule.id === "guardrail-manual-review-required");
     const refusalRule = this.bundle.rules.find((rule) => rule.id === "guardrail-insufficient-data");
+    const comparisonRule = this.bundle.rules.find((rule) => rule.id === "prototype-local-scenario-comparison") as
+      | RuleDefinition
+      | undefined;
 
     if (missingData.some((gap) => gap.blocking)) {
       const refusalScenario = buildRefusalScenario(profile.id);
@@ -108,9 +113,19 @@ class MockTaxRuleEngine implements TaxRuleEngine {
         id: "alert-insufficient-data",
         severity: "critical",
         title: "Dados insuficientes para concluir a análise",
-        message: "O motor mock recusou a conclusão para evitar um resultado com falsa aparência oficial.",
+        message: "O motor local de protótipo recusou a conclusão para evitar um resultado com falsa aparência oficial.",
         code: "INSUFFICIENT_DATA",
         sourceRuleId: refusalRule?.id,
+        requiresHumanReview: true,
+      };
+
+      const reviewPendingAlert: SimulationAlert = {
+        id: "alert-review-pending",
+        severity: "warning",
+        title: "Revisão humana/local continua obrigatória",
+        message: "Mesmo após preencher os campos, este bundle MVP segue exigindo revisão humana antes de qualquer uso real.",
+        code: "MANUAL_REVIEW_REQUIRED",
+        sourceRuleId: reviewRequiredRule?.id,
         requiresHumanReview: true,
       };
 
@@ -118,14 +133,14 @@ class MockTaxRuleEngine implements TaxRuleEngine {
         estimatedSavings: 0,
         estimatedSavingsLabel: formatCurrency(0),
         narrative:
-          "Simulação recusada pelo guardrail mock. O objetivo é demonstrar um comportamento conservador quando faltam dados essenciais.",
+          "Simulação recusada pelo guardrail conservador do MVP. O objetivo é demonstrar recusa explícita quando faltam dados essenciais ou quando ainda há necessidade de revisão humana.",
         decisionStatus: "refused",
         confidence: refusalScenario.confidence,
       };
 
       return {
         id: `sim-${profile.id}`,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         profileId: profile.id,
         bundleId: this.bundle.id,
         bundleVersion: this.bundle.version,
@@ -154,51 +169,64 @@ class MockTaxRuleEngine implements TaxRuleEngine {
           appliedRules: [
             {
               ruleId: refusalRule?.id ?? "guardrail-insufficient-data",
-              title: refusalRule?.title ?? "Recusa mock por insuficiência de dados",
+              title: refusalRule?.title ?? "Recusa por insuficiência de dados mínimos",
               status: "refused",
-              reason: "Campos mínimos ausentes bloquearam a simulação.",
+              reason: "Campos mínimos ausentes bloquearam a simulação no recorte conservador do MVP.",
               citations: refusalRule?.citations ?? [],
+            },
+            {
+              ruleId: reviewRequiredRule?.id ?? "guardrail-manual-review-required",
+              title: reviewRequiredRule?.title ?? "Recusa por revisão humana pendente",
+              status: "insufficient_data",
+              reason: "Mesmo no modo local, o bundle mantém revisão humana como exigência explícita de governança.",
+              citations: reviewRequiredRule?.citations ?? [],
             },
           ],
           missingData,
-          warnings: [alert],
+          warnings: [alert, reviewPendingAlert],
           timeline: [
             {
               id: "evt-start",
-              timestamp: new Date().toISOString(),
+              timestamp: now,
               kind: "simulation_started",
-              message: "Simulação mock iniciada.",
+              message: "Simulação do bundle MVP local iniciada.",
             },
             {
               id: "evt-bundle",
-              timestamp: new Date().toISOString(),
+              timestamp: now,
               kind: "bundle_selected",
               message: `Bundle ${this.bundle.id}@${this.bundle.version} selecionado.`,
               refs: [this.bundle.id],
+              metadata: {
+                approvalStatus: this.bundle.approvalStatus,
+                reviewedBy: this.bundle.reviewedBy,
+                reviewedAt: this.bundle.reviewedAt ?? null,
+              },
             },
             {
               id: "evt-insufficient-data",
-              timestamp: new Date().toISOString(),
+              timestamp: now,
               kind: "insufficient_data",
-              message: "Guardrail mock acionado por insuficiência de dados.",
+              message: "Guardrail conservador acionado por insuficiência de dados no MVP local.",
               refs: missingData.map((gap) => gap.field),
             },
             {
               id: "evt-finished",
-              timestamp: new Date().toISOString(),
+              timestamp: now,
               kind: "simulation_finished",
-              message: "Simulação encerrada com recusa mock.",
+              message: "Simulação encerrada com recusa explícita de protótipo/local.",
             },
           ],
         },
         refusal: {
           reasonCode: "INSUFFICIENT_DATA",
-          message: "A simulação foi recusada pelo motor mock porque faltam dados mínimos para um resultado auditável.",
+          message:
+            "A simulação foi recusada pelo bundle MVP local porque faltam dados mínimos para um resultado auditável e o protótipo não deve fingir cobertura tributária completa.",
           missingFields: missingData.map((gap) => gap.field),
           nextSteps: [
             "Preencher os campos obrigatórios ausentes.",
-            "Revisar manualmente a jurisdição e a descrição da atividade.",
-            "Executar nova simulação somente após complementar os dados.",
+            "Revisar manualmente a jurisdição, a atividade e o enquadramento informado.",
+            "Executar nova simulação apenas como demo local, nunca como orientação fiscal oficial.",
           ],
         },
       };
@@ -207,43 +235,40 @@ class MockTaxRuleEngine implements TaxRuleEngine {
     const currentMonthlyTax = profile.monthlyRevenue * 0.12;
     const suggestedMonthlyTax = profile.monthlyRevenue * 0.105;
     const estimatedSavings = Number((currentMonthlyTax - suggestedMonthlyTax).toFixed(2));
-    const comparisonRule = this.bundle.rules.find((rule) => rule.id === "placeholder-regime-comparison") as
-      | RuleDefinition
-      | undefined;
 
     return {
       id: `sim-${profile.id}`,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       profileId: profile.id,
       bundleId: this.bundle.id,
       bundleVersion: this.bundle.version,
       status: "partial",
       currentScenario: buildSuccessfulScenario(
-        "cenario-atual-mock",
-        "Cenário atual (mock)",
+        "cenario-atual-prototype-local",
+        "Cenário atual (protótipo local)",
         currentMonthlyTax,
-        "Estimativa fake para validar o fluxo do starter.",
+        "Estimativa artificial de demo para validar o fluxo do MVP local.",
       ),
       suggestedScenario: buildSuccessfulScenario(
-        "cenario-sugerido-mock",
-        "Cenário alternativo (mock)",
+        "cenario-sugerido-prototype-local",
+        "Cenário alternativo (protótipo local)",
         suggestedMonthlyTax,
-        "Comparação simulada local, sem caráter oficial.",
+        "Comparação simulada local e auditável, sem caráter oficial.",
       ),
       summary: {
         estimatedSavings,
         estimatedSavingsLabel: `${formatCurrency(estimatedSavings)}/mês`,
         narrative:
-          "Resultado gerado por simulação local fake para comprovar a integração entre domínio, engine e UI. Antes de uso real, substitua por regras validadas por especialista fiscal.",
+          "Resultado gerado por bundle MVP local/protótipo para demonstrar integração entre domínio, engine, auditoria e UI. Não representa regra fiscal oficial e exige revisão humana antes de qualquer decisão real.",
         decisionStatus: "completed_with_gaps",
         confidence: buildConfidenceBand({
           level: "low",
           score: 0.36,
           label: "Baixa",
-          rationale: "A saída é útil para testes de contrato, mas depende de premissas placeholder e não expressa regra oficial.",
-          drivers: ["Bundle versionado", "Premissas explícitas", "Trilha auditável"],
-          blockers: ["Sem base normativa oficial consolidada"],
-          reviewRecommendation: "Não usar em produção regulatória sem revisão especializada.",
+          rationale: "A saída é útil para testes de contrato e trilha auditável, mas depende de percentuais demo e recorte estreito do MVP.",
+          drivers: ["Bundle versionado e auditável", "Metadados explícitos de revisão", "Premissas e guardrails visíveis"],
+          blockers: ["Sem base normativa oficial consolidada", "Comparação artificial de demo"],
+          reviewRecommendation: "Não usar em produção regulatória; exigir validação especializada.",
         }),
       },
       audit: {
@@ -251,7 +276,7 @@ class MockTaxRuleEngine implements TaxRuleEngine {
           {
             id: "premise-monthly-revenue",
             label: "Receita mensal declarada",
-            description: "Receita mensal informada pelo usuário ao iniciar a simulação.",
+            description: "Receita mensal informada pelo usuário ao iniciar a simulação demo.",
             kind: "declared_by_user",
             value: profile.monthlyRevenue,
             sourceRefs: ["profile.monthlyRevenue"],
@@ -259,7 +284,7 @@ class MockTaxRuleEngine implements TaxRuleEngine {
               level: "moderate",
               score: 0.6,
               label: "Moderada",
-              rationale: "Depende de declaração manual do usuário, sem documento comprobatório neste starter.",
+              rationale: "Depende de declaração manual do usuário, sem documento comprobatório neste protótipo.",
               drivers: [`Valor informado: ${formatCurrency(profile.monthlyRevenue)}`],
             }),
             explicitPlaceholder: false,
@@ -267,7 +292,7 @@ class MockTaxRuleEngine implements TaxRuleEngine {
           {
             id: "premise-current-regime",
             label: "Regime atual declarado",
-            description: "Regime informado pelo usuário; não há conferência normativa automática nesta versão.",
+            description: "Regime informado pelo usuário; não há conferência normativa automática nesta versão local.",
             kind: "declared_by_user",
             value: profile.regime,
             sourceRefs: ["profile.regime"],
@@ -275,18 +300,34 @@ class MockTaxRuleEngine implements TaxRuleEngine {
               level: "moderate",
               score: 0.55,
               label: "Moderada",
-              rationale: "Informação declarada, ainda sem verificação documental.",
+              rationale: "Informação declarada, ainda sem verificação documental ou normativa.",
               drivers: [`Regime declarado: ${profile.regime}`],
             }),
             explicitPlaceholder: false,
           },
           {
+            id: "premise-bundle-scope",
+            label: "Recorte estreito do bundle MVP",
+            description: "Este bundle cobre apenas uma demonstração artificial local com revisão humana obrigatória.",
+            kind: "manual_review",
+            value: "mvp-local-prototype-scope",
+            sourceRefs: ["engine/starter-rule-bundle.ts"],
+            confidence: buildConfidenceBand({
+              level: "high",
+              score: 0.85,
+              label: "Alta",
+              rationale: "Premissa explicitamente definida no próprio bundle versionado.",
+              drivers: ["Metadados e disclaimer do bundle"],
+            }),
+            explicitPlaceholder: false,
+          },
+          {
             id: "premise-comparison-rate",
-            label: "Percentuais comparativos placeholder",
-            description: "Percentuais fixos usados apenas para demonstrar o contrato do motor.",
+            label: "Percentuais comparativos demo",
+            description: "Percentuais fixos artificiais usados apenas para demonstrar o contrato do motor e a auditoria local.",
             kind: "placeholder",
             value: "12% vs 10,5%",
-            sourceRefs: ["engine/mock-tax-rule-engine.ts"],
+            sourceRefs: ["engine/mock-tax-rule-engine.ts", "engine/starter-rule-bundle.ts"],
             confidence: buildConfidenceBand({
               level: "very_low",
               score: 0.1,
@@ -300,83 +341,96 @@ class MockTaxRuleEngine implements TaxRuleEngine {
         ],
         appliedRules: [
           {
-            ruleId: comparisonRule?.id ?? "placeholder-regime-comparison",
-            title: comparisonRule?.title ?? "Comparação inicial de cenários",
+            ruleId: comparisonRule?.id ?? "prototype-local-scenario-comparison",
+            title: comparisonRule?.title ?? "Comparação artificial de cenários locais",
             status: "applied",
-            reason: "Regra mock aplicada para comparar dois cenários artificiais e exercitar a auditoria.",
+            reason: "Regra de demo aplicada para comparar dois cenários artificiais e exercitar a auditoria do MVP local.",
             citations: comparisonRule?.citations ?? [],
+          },
+          {
+            ruleId: reviewRequiredRule?.id ?? "guardrail-manual-review-required",
+            title: reviewRequiredRule?.title ?? "Recusa por revisão humana pendente",
+            status: "applied",
+            reason: "A simulação prossegue apenas como demonstração local e continua marcada como dependente de revisão humana.",
+            citations: reviewRequiredRule?.citations ?? [],
           },
         ],
         missingData: [
           buildGap(
             "officialNormativeBasis",
             "Base normativa oficial consolidada",
-            "Este starter ainda não possui pacote normativo revisado por especialista.",
+            "Este bundle MVP não possui pacote normativo oficial revisado por especialista; cobre apenas demo local auditável.",
             false,
           ),
           buildGap(
             "activityTaxClassification",
             "Classificação tributária detalhada da atividade",
-            "A atividade ainda não foi mapeada em taxonomia fiscal estruturada.",
+            "A atividade ainda não foi mapeada em taxonomia fiscal estruturada dentro do recorte estreito do MVP.",
             false,
           ),
         ],
         warnings: [
           {
-            id: "alert-non-official",
+            id: "alert-prototype-local",
             severity: "critical",
-            title: "Sem valor oficial",
-            message: "Não use este cálculo como orientação fiscal oficial.",
-            code: "NON_OFFICIAL_RESULT",
+            title: "Protótipo local sem valor oficial",
+            message: "Não use este cálculo como orientação fiscal oficial; trata-se de demo local auditável.",
+            code: "NON_OFFICIAL_PROTOTYPE_RESULT",
             requiresHumanReview: true,
           },
           {
             id: "alert-review-required",
             severity: "warning",
             title: "Validação humana obrigatória",
-            message: "Validação contábil é obrigatória antes de qualquer decisão real.",
+            message: "Validação contábil/humana permanece obrigatória antes de qualquer decisão real.",
             code: "HUMAN_REVIEW_REQUIRED",
+            sourceRuleId: reviewRequiredRule?.id,
             requiresHumanReview: true,
           },
         ],
         timeline: [
           {
             id: "evt-start",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "simulation_started",
-            message: "Simulação mock iniciada.",
+            message: "Simulação do bundle MVP local iniciada.",
           },
           {
             id: "evt-bundle",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "bundle_selected",
             message: `Bundle ${this.bundle.id}@${this.bundle.version} selecionado.`,
             refs: [this.bundle.id],
+            metadata: {
+              approvalStatus: this.bundle.approvalStatus,
+              reviewedBy: this.bundle.reviewedBy,
+              reviewedAt: this.bundle.reviewedAt ?? null,
+            },
           },
           {
             id: "evt-premise-1",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "premise_registered",
-            message: "Premissas declaradas e placeholders registrados para auditoria.",
+            message: "Premissas declaradas, guardrails e placeholders de demo registrados para auditoria.",
           },
           {
             id: "evt-rule",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "rule_evaluated",
-            message: "Regra mock de comparação executada.",
-            refs: [comparisonRule?.id ?? "placeholder-regime-comparison"],
+            message: "Regra de comparação artificial do MVP local executada.",
+            refs: [comparisonRule?.id ?? "prototype-local-scenario-comparison"],
           },
           {
             id: "evt-warning",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "alert_emitted",
-            message: "Alertas de não-oficialidade e revisão humana emitidos.",
+            message: "Alertas de protótipo/local e revisão humana emitidos.",
           },
           {
             id: "evt-finished",
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             kind: "simulation_finished",
-            message: "Simulação encerrada com resultado parcial auditável.",
+            message: "Simulação encerrada com resultado parcial auditável de demo local.",
           },
         ],
       },

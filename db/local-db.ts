@@ -262,6 +262,20 @@ export const localDb = {
     });
     return items.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null;
   },
+  clearOnboardingProfiles: () => onboardingStore.clear(),
+  clearAll: async () => {
+    await Promise.all([
+      onboardingStore.clear(),
+      profileStore.clear(),
+      simulationStore.clear(),
+      resultStore.clear(),
+      ingestionDocumentStore.clear(),
+      documentStore.clear(),
+      reportStore.clear(),
+      auditStore.clear(),
+      snapshotStore.clear(),
+    ]);
+  },
   saveSnapshot,
   getSnapshot,
   listSnapshots,
