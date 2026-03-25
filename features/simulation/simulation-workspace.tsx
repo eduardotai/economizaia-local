@@ -91,12 +91,13 @@ function buildScenarioCards(profile: AnonymousOnboardingProfile, simulation: Sim
 }
 
 function getQuickManualProgress(profile: AnonymousOnboardingProfile) {
+  const q = profile.quickManualInput;
   const checks = [
-    profile.quickManualInput.monthlyRevenue.trim().length > 0,
-    profile.quickManualInput.monthlyExpenses.trim().length > 0,
-    profile.quickManualInput.currentRegime !== "indefinido",
-    profile.quickManualInput.activityDescription.trim().length > 0,
-    profile.quickManualInput.periodLabel.trim().length > 0,
+    (q.monthlyRevenue ?? "").trim().length > 0,
+    (q.monthlyExpenses ?? "").trim().length > 0,
+    q.currentRegime !== "indefinido",
+    (q.activityDescription ?? "").trim().length > 0,
+    (q.periodLabel ?? "").trim().length > 0,
   ];
 
   const completed = checks.filter(Boolean).length;
@@ -108,31 +109,32 @@ function getQuickManualProgress(profile: AnonymousOnboardingProfile) {
 }
 
 function getQuickManualChecklist(profile: AnonymousOnboardingProfile) {
+  const q = profile.quickManualInput;
   return [
     {
       id: "faturamento",
       label: "Informar faturamento mensal",
-      done: profile.quickManualInput.monthlyRevenue.trim().length > 0,
+      done: (q.monthlyRevenue ?? "").trim().length > 0,
     },
     {
       id: "despesas",
       label: "Informar despesas dedutíveis",
-      done: profile.quickManualInput.monthlyExpenses.trim().length > 0,
+      done: (q.monthlyExpenses ?? "").trim().length > 0,
     },
     {
       id: "regime",
       label: "Escolher regime atual",
-      done: profile.quickManualInput.currentRegime !== "indefinido",
+      done: q.currentRegime !== "indefinido",
     },
     {
       id: "atividade",
       label: "Descrever atividade principal",
-      done: profile.quickManualInput.activityDescription.trim().length > 0,
+      done: (q.activityDescription ?? "").trim().length > 0,
     },
     {
       id: "periodo",
       label: "Confirmar período da leitura",
-      done: profile.quickManualInput.periodLabel.trim().length > 0,
+      done: (q.periodLabel ?? "").trim().length > 0,
     },
   ];
 }

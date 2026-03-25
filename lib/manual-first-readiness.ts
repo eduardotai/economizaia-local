@@ -63,11 +63,11 @@ function normalizeCurrencyInput(value: string) {
 function hasManualRequiredFields(profile: AnonymousOnboardingProfile) {
   const quick = profile.quickManualInput;
   return {
-    monthlyRevenue: quick.monthlyRevenue.trim().length > 0 && normalizeCurrencyInput(quick.monthlyRevenue) > 0,
-    monthlyExpenses: quick.monthlyExpenses.trim().length > 0,
+    monthlyRevenue: (quick.monthlyRevenue ?? "").trim().length > 0 && normalizeCurrencyInput(quick.monthlyRevenue ?? "") > 0,
+    monthlyExpenses: (quick.monthlyExpenses ?? "").trim().length > 0,
     currentRegime: quick.currentRegime !== "indefinido",
-    activityDescription: quick.activityDescription.trim().length > 0,
-    periodLabel: quick.periodLabel.trim().length > 0,
+    activityDescription: (quick.activityDescription ?? "").trim().length > 0,
+    periodLabel: (quick.periodLabel ?? "").trim().length > 0,
   };
 }
 
