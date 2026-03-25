@@ -83,18 +83,12 @@ function isCriticalField(field: ManualReviewField) {
 }
 
 function getFieldDiffLabel(field: ManualReviewField) {
-  if (field.value.trim() === field.originalValue.trim()) {
-    return "Sem alteração";
-  }
+  const val = (field.value ?? "").trim();
+  const orig = (field.originalValue ?? "").trim();
 
-  if (!field.originalValue.trim() && field.value.trim()) {
-    return "Valor preenchido manualmente";
-  }
-
-  if (field.originalValue.trim() && !field.value.trim()) {
-    return "Valor removido manualmente";
-  }
-
+  if (val === orig) return "Sem alteração";
+  if (!orig && val) return "Valor preenchido manualmente";
+  if (orig && !val) return "Valor removido manualmente";
   return "Valor alterado";
 }
 
@@ -139,7 +133,7 @@ export function DocumentList({
             const criticalFields = requiredFields.filter(isCriticalField);
             const complementaryFields = document.manualReview.fields.filter((field) => !criticalFields.some((item) => item.id === field.id));
             const reviewProgress = getFieldProgress(document);
-            const canConfirmAll = requiredFields.every((field) => field.value.trim().length > 0);
+            const canConfirmAll = requiredFields.every((field) => (field.value ?? "").trim().length > 0);
 
             return (
               <div key={document.id} className="rounded-3xl border border-border/70 bg-background/40 p-5">
@@ -336,7 +330,7 @@ function FieldSection({
       <div className="mb-3 text-sm font-medium text-foreground">{title}</div>
       <div className="grid gap-3 xl:grid-cols-2">
         {fields.map((field) => {
-          const hasDiff = field.value.trim() !== field.originalValue.trim();
+          const hasDiff = (field.value ?? "").trim() !== (field.originalValue ?? "").trim();
 
           return (
             <div key={field.id} className="rounded-2xl border border-border/70 bg-background/70 px-3 py-3 text-sm">
@@ -371,7 +365,7 @@ function FieldSection({
                 <Button
                   size="sm"
                   variant={field.state === "confirmed" ? "outline" : "default"}
-                  disabled={field.value.trim().length === 0}
+                  disabled={(field.value ?? "").trim().length === 0}
                   onClick={() => onConfirmManualReviewField(document.id, field.id)}
                 >
                   Confirmar campo

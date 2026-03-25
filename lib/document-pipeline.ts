@@ -330,7 +330,7 @@ export function updateManualReviewField(document: IngestedDocument, fieldId: str
       ...field,
       value,
       reviewed: false,
-      state: (value.trim().length === 0 ? "needs_review" : value.trim() === field.originalValue.trim() ? "needs_review" : "edited") as ManualReviewField["state"],
+      state: ((value ?? "").trim().length === 0 ? "needs_review" : (value ?? "").trim() === (field.originalValue ?? "").trim() ? "needs_review" : "edited") as ManualReviewField["state"],
       updatedAt: reviewedAt,
       history: [
         ...field.history,
@@ -363,7 +363,7 @@ export function confirmManualReviewField(document: IngestedDocument, fieldId: st
   const reviewedAt = nowIso();
 
   const nextFields = document.manualReview.fields.map((field) => {
-    if (field.id !== fieldId || field.value.trim().length === 0) {
+    if (field.id !== fieldId || (field.value ?? "").trim().length === 0) {
       return field;
     }
 
@@ -394,7 +394,7 @@ export function confirmManualReviewField(document: IngestedDocument, fieldId: st
 
 export function confirmManualReview(document: IngestedDocument): IngestedDocument {
   const reviewedAt = nowIso();
-  const hasPendingRequiredField = document.manualReview.fields.some((field) => field.required && field.value.trim().length === 0);
+  const hasPendingRequiredField = document.manualReview.fields.some((field) => field.required && (field.value ?? "").trim().length === 0);
 
   if (hasPendingRequiredField) {
     return {
@@ -456,7 +456,7 @@ export function confirmManualReview(document: IngestedDocument): IngestedDocumen
 
 export function documentCanRunRuleEngine(document: IngestedDocument): boolean {
   const requiredFields = document.manualReview.fields.filter((field) => field.required);
-  const allRequiredFieldsConfirmed = requiredFields.every((field) => field.state === "confirmed" && field.value.trim().length > 0);
+  const allRequiredFieldsConfirmed = requiredFields.every((field) => field.state === "confirmed" && (field.value ?? "").trim().length > 0);
 
   return Boolean(document.manualReview.required && document.manualReview.confirmed && allRequiredFieldsConfirmed && document.status === "manual_review_confirmed");
 }
