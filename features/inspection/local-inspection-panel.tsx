@@ -81,13 +81,13 @@ export function LocalInspectionPanel() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <Badge variant="secondary">Inspeção local</Badge>
-            <CardTitle>Auditoria e snapshots persistidos no navegador</CardTitle>
+            <CardTitle>Auditoria e snapshots para dar rastreabilidade à análise</CardTitle>
             <CardDescription className="max-w-3xl leading-6">
-              Painel simples para debug manual do fluxo local-first. Aqui você consegue verificar o que foi gravado em
+              Painel simples para verificar o que foi gravado em
               <code className="mx-1 rounded bg-background px-1.5 py-0.5 text-xs text-foreground">audit_events</code>
               e
               <code className="mx-1 rounded bg-background px-1.5 py-0.5 text-xs text-foreground">snapshots</code>
-              sem backend remoto.
+              no navegador. É aqui que a proposta local-first ganha evidência observável.
             </CardDescription>
           </div>
 
@@ -119,7 +119,7 @@ export function LocalInspectionPanel() {
           <div className="space-y-2">
             <Badge>audit_events</Badge>
             <CardTitle className="text-lg">Eventos de auditoria locais</CardTitle>
-            <CardDescription>Timestamp, tipo, origem, aggregate id, refs e metadata útil para investigar o fluxo.</CardDescription>
+            <CardDescription>Timeline do que foi salvo, processado, revisado ou gerado ao longo do fluxo.</CardDescription>
           </div>
 
           {auditEvents.length > 0 ? (
@@ -155,7 +155,7 @@ export function LocalInspectionPanel() {
           ) : (
             <EmptyState
               title="Nenhum evento encontrado"
-              description="Gere uma simulação local ou processe um documento para popular a trilha de auditoria."
+              description="Gere uma leitura local ou processe um documento para popular a trilha de auditoria."
             />
           )}
         </Card>
@@ -164,7 +164,7 @@ export function LocalInspectionPanel() {
           <div className="space-y-2">
             <Badge variant="secondary">snapshots</Badge>
             <CardTitle className="text-lg">Snapshots locais</CardTitle>
-            <CardDescription>Inspeção rápida de escopo, entity id, momento da captura e payload persistido.</CardDescription>
+            <CardDescription>Capturas persistidas do estado que ajudam a explicar o contexto de cada etapa.</CardDescription>
           </div>
 
           {snapshots.length > 0 ? (

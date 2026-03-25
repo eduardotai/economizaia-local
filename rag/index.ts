@@ -1,8 +1,8 @@
 import { createId, nowIso } from "@/lib/document-utils";
 
 export type NormativeDocumentKind = "official_text" | "technical_note" | "internal_note" | "placeholder_reference";
-export type NormativeDocumentStatus = "mock" | "placeholder" | "review_required";
-export type RetrievalStrategy = "keyword_overlap" | "manual_seed" | "embedding_placeholder";
+export type NormativeDocumentStatus = "mock" | "placeholder" | "review_required" | "draft";
+export type RetrievalStrategy = "keyword_overlap" | "embedding_cosine" | "manual_seed" | "embedding_placeholder";
 export type ExplanationEvidenceRole = "primary" | "supporting" | "constraint";
 
 export interface NormativeDocumentRef {
@@ -59,7 +59,7 @@ export interface RetrievalResult {
     indexedDocuments: number;
     indexedChunks: number;
     retrievalStrategy: RetrievalStrategy;
-    placeholder: true;
+    placeholder: boolean;
     notes: string[];
   };
 }
@@ -85,68 +85,48 @@ export interface ExplanationContext {
   explicitPlaceholder: true;
 }
 
-const MOCK_NORMATIVE_DOCUMENTS: NormativeDocumentRef[] = [
-  {
-    id: "normative-placeholder-architecture",
-    slug: "local-rag-architecture-placeholder",
-    title: "Arquitetura local de contexto explicativo (placeholder)",
-    kind: "placeholder_reference",
-    status: "placeholder",
-    jurisdiction: "unknown",
-    sourceLabel: "Documento interno de arquitetura do protótipo",
-    disclaimer:
-      "Este item não representa texto normativo oficial. Existe apenas para demonstrar contratos e fluxo de RAG local no protótipo.",
-    explicitPlaceholder: true,
-  },
-  {
-    id: "normative-placeholder-review",
-    slug: "human-review-boundary-placeholder",
-    title: "Limites de revisão humana e não-oficialidade (placeholder)",
-    kind: "placeholder_reference",
-    status: "placeholder",
-    jurisdiction: "unknown",
-    sourceLabel: "Nota interna de segurança do protótipo",
-    disclaimer:
-      "Este item não representa texto normativo oficial. Existe apenas para explicitar limites do mock local-first.",
-    explicitPlaceholder: true,
-  },
-];
+import { REAL_NORMATIVE_DOCUMENTS, REAL_NORMATIVE_CHUNKS } from "@/rag/normative-chunks";
 
-const MOCK_NORMATIVE_CHUNKS: NormativeChunk[] = [
-  {
-    id: "chunk-architecture-001",
-    documentId: "normative-placeholder-architecture",
-    ordinal: 1,
-    text:
-      "O scaffold inicial de RAG local usa indexação simples por palavras-chave para preparar o fluxo explicativo, sem inferir interpretação normativa oficial.",
-    keywords: ["rag", "local", "indexação", "palavras-chave", "explicativo"],
-    sectionLabel: "Arquitetura base",
-    tokenEstimate: 26,
-    explicitPlaceholder: true,
-  },
-  {
-    id: "chunk-architecture-002",
-    documentId: "normative-placeholder-architecture",
-    ordinal: 2,
-    text:
-      "A evolução planejada substitui a busca mock por embeddings locais e reranking no dispositivo, preservando contratos de retrieval e contexto explicativo.",
-    keywords: ["embeddings", "reranking", "dispositivo", "retrieval", "contratos"],
-    sectionLabel: "Evolução planejada",
-    tokenEstimate: 24,
-    explicitPlaceholder: true,
-  },
-  {
-    id: "chunk-review-001",
-    documentId: "normative-placeholder-review",
-    ordinal: 1,
-    text:
-      "Toda resposta explicativa deste checkpoint deve deixar explícito que o conteúdo é mock ou placeholder e que revisão humana continua obrigatória.",
-    keywords: ["mock", "placeholder", "revisão", "humana", "obrigatória"],
-    sectionLabel: "Restrições do checkpoint",
-    tokenEstimate: 24,
-    explicitPlaceholder: true,
-  },
-];
+// ── Embedding cache ───────────────────────────────────────────────────────────
+// Cached after first successful load so subsequent calls are instant.
+let _embeddingPipeline: ((texts: string[], opts?: Record<string, unknown>) => Promise<{ data: Float32Array }[]>) | null = null;
+let _chunkEmbeddings: Float32Array[] | null = null;
+
+async function getEmbeddingPipeline() {
+  if (_embeddingPipeline) return _embeddingPipeline;
+  if (typeof window === "undefined") return null; // SSR/Node.js — skip
+
+  try {
+    const { pipeline, env } = await import("@xenova/transformers");
+    env.allowLocalModels = false;
+    // @ts-expect-error — @xenova/transformers v2 types are loose
+    _embeddingPipeline = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+    return _embeddingPipeline;
+  } catch {
+    return null;
+  }
+}
+
+function cosine(a: Float32Array, b: Float32Array): number {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB) + 1e-10);
+}
+
+async function embedText(pipe: NonNullable<typeof _embeddingPipeline>, text: string): Promise<Float32Array> {
+  const output = await pipe([text], { pooling: "mean", normalize: true });
+  return output[0].data as Float32Array;
+}
+
+async function getChunkEmbeddings(pipe: NonNullable<typeof _embeddingPipeline>): Promise<Float32Array[]> {
+  if (_chunkEmbeddings) return _chunkEmbeddings;
+  _chunkEmbeddings = await Promise.all(REAL_NORMATIVE_CHUNKS.map((chunk) => embedText(pipe, chunk.text)));
+  return _chunkEmbeddings;
+}
 
 function normalizeTerms(value: string) {
   return value
@@ -167,28 +147,24 @@ export interface LocalKnowledgeBase {
   chunks: NormativeChunk[];
 }
 
-export function getMockLocalKnowledgeBase(): LocalKnowledgeBase {
-  return {
-    documents: MOCK_NORMATIVE_DOCUMENTS,
-    chunks: MOCK_NORMATIVE_CHUNKS,
-  };
+export function getLocalKnowledgeBase(): LocalKnowledgeBase {
+  return { documents: REAL_NORMATIVE_DOCUMENTS, chunks: REAL_NORMATIVE_CHUNKS };
 }
 
-export function retrieveLocalNormativeContext(queryContext: RetrievalQueryContext): RetrievalResult {
-  const knowledgeBase = getMockLocalKnowledgeBase();
+/** @deprecated Use getLocalKnowledgeBase() */
+export function getMockLocalKnowledgeBase(): LocalKnowledgeBase {
+  return getLocalKnowledgeBase();
+}
+
+function keywordRetrieve(queryContext: RetrievalQueryContext, chunks: NormativeChunk[], topK = 5): RetrievalEvidence[] {
   const queryTerms = Array.from(new Set([...(queryContext.tags ?? []), ...normalizeTerms(queryContext.query)]));
 
-  const evidences = knowledgeBase.chunks
+  return chunks
     .map<RetrievalEvidence | null>((chunk) => {
       const haystackTerms = Array.from(new Set([...chunk.keywords.flatMap(normalizeTerms), ...normalizeTerms(chunk.text)]));
       const matchedTerms = queryTerms.filter((term) => haystackTerms.includes(term));
-
-      if (matchedTerms.length === 0) {
-        return null;
-      }
-
+      if (matchedTerms.length === 0) return null;
       const score = Number((matchedTerms.length / Math.max(queryTerms.length, 1)).toFixed(2));
-
       return {
         chunkId: chunk.id,
         documentId: chunk.documentId,
@@ -196,13 +172,61 @@ export function retrieveLocalNormativeContext(queryContext: RetrievalQueryContex
         strategy: "keyword_overlap",
         matchedTerms,
         excerpt: buildExcerpt(chunk.text),
-        role: matchedTerms.includes("revisao") || matchedTerms.includes("humana") ? "constraint" : "supporting",
-        explicitPlaceholder: true,
+        role: (matchedTerms.includes("revisao") || matchedTerms.includes("humana") || matchedTerms.includes("limite")) ? "constraint" : "primary",
+        explicitPlaceholder: chunk.explicitPlaceholder,
       };
     })
-    .filter((value): value is RetrievalEvidence => value !== null)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 3);
+    .filter((v): v is RetrievalEvidence => v !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+}
+
+export async function retrieveLocalNormativeContext(queryContext: RetrievalQueryContext): Promise<RetrievalResult> {
+  const kb = getLocalKnowledgeBase();
+  const pipe = await getEmbeddingPipeline();
+  let evidences: RetrievalEvidence[];
+  let strategy: RetrievalStrategy;
+  let notes: string[];
+
+  if (pipe) {
+    try {
+      const [queryEmbedding, chunkEmbeddings] = await Promise.all([
+        embedText(pipe, queryContext.query),
+        getChunkEmbeddings(pipe),
+      ]);
+
+      const scored = kb.chunks.map((chunk, i) => ({
+        chunk,
+        score: cosine(queryEmbedding, chunkEmbeddings[i]),
+      }));
+
+      evidences = scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .filter((item) => item.score > 0.2)
+        .map((item) => ({
+          chunkId: item.chunk.id,
+          documentId: item.chunk.documentId,
+          score: Number(item.score.toFixed(3)),
+          strategy: "embedding_cosine",
+          matchedTerms: [],
+          excerpt: buildExcerpt(item.chunk.text),
+          role: (item.chunk.documentId === "doc-guardrails-revisao" ? "constraint" : item.score > 0.5 ? "primary" : "supporting"),
+          explicitPlaceholder: item.chunk.explicitPlaceholder,
+        }));
+
+      strategy = "embedding_cosine";
+      notes = ["Retrieval por embeddings locais (Xenova/all-MiniLM-L6-v2).", "Conteúdo baseado em LC 123/2006, RIR/2018 e EC 132/2023."];
+    } catch {
+      evidences = keywordRetrieve(queryContext, kb.chunks);
+      strategy = "keyword_overlap";
+      notes = ["Falha no embedding — fallback para retrieval por palavras-chave.", "Conteúdo normativo real disponível."];
+    }
+  } else {
+    evidences = keywordRetrieve(queryContext, kb.chunks);
+    strategy = "keyword_overlap";
+    notes = ["Retrieval por palavras-chave (embedding não disponível neste ambiente).", "Conteúdo normativo real — LC 123/2006, RIR/2018, EC 132/2023."];
+  }
 
   return {
     id: createId("retrieval"),
@@ -210,61 +234,63 @@ export function retrieveLocalNormativeContext(queryContext: RetrievalQueryContex
     query: queryContext,
     evidences,
     diagnostics: {
-      indexedDocuments: knowledgeBase.documents.length,
-      indexedChunks: knowledgeBase.chunks.length,
-      retrievalStrategy: "keyword_overlap",
-      placeholder: true,
-      notes: [
-        "Índice local mock em memória com palavras-chave.",
-        "Sem embeddings, sem reranking neural e sem interpretação normativa oficial.",
-      ],
+      indexedDocuments: kb.documents.length,
+      indexedChunks: kb.chunks.length,
+      retrievalStrategy: strategy,
+      placeholder: false,
+      notes,
     },
   };
 }
 
-export function buildExplanationContext(params: {
+export async function buildExplanationContext(params: {
   simulationId: string;
   reportId?: string;
   query: string;
   tags?: string[];
-}): ExplanationContext {
-  const retrieval = retrieveLocalNormativeContext({
+}): Promise<ExplanationContext> {
+  const retrieval = await retrieveLocalNormativeContext({
     query: params.query,
     simulationId: params.simulationId,
     reportId: params.reportId,
     tags: params.tags,
   });
 
-  const documentsById = new Map(MOCK_NORMATIVE_DOCUMENTS.map((document) => [document.id, document]));
+  const kb = getLocalKnowledgeBase();
+  const documentsById = new Map(kb.documents.map((doc) => [doc.id, doc]));
 
   const blocks: ExplanationContextBlock[] = retrieval.evidences.map((evidence, index) => {
-    const document = documentsById.get(evidence.documentId);
-
+    const doc = documentsById.get(evidence.documentId);
+    const matchInfo = evidence.matchedTerms.length > 0 ? ` Termos: ${evidence.matchedTerms.slice(0, 5).join(", ")}.` : "";
     return {
       id: `explanation-block-${index + 1}`,
-      title: document?.title ?? "Referência local mock",
-      summary: `${evidence.excerpt} Correspondência por termos: ${evidence.matchedTerms.join(", ") || "nenhuma"}.`,
+      title: doc?.title ?? "Referência normativa local",
+      summary: `${evidence.excerpt}${matchInfo}`,
       evidenceChunkIds: [evidence.chunkId],
       evidenceDocumentIds: [evidence.documentId],
-      explicitPlaceholder: true,
+      explicitPlaceholder: evidence.explicitPlaceholder,
     };
   });
+
+  const hasRealContent = retrieval.evidences.some((e) => !e.explicitPlaceholder);
+  const userFacingSummary = retrieval.evidences.length > 0
+    ? hasRealContent
+      ? `Contexto recuperado de ${new Set(retrieval.evidences.map((e) => e.documentId)).size} documento(s) normativo(s) via ${retrieval.diagnostics.retrievalStrategy}.`
+      : "Contexto explicativo local montado com referências internas."
+    : "Nenhuma evidência normativa correspondente foi encontrada para esta consulta.";
 
   return {
     id: createId("explanation_context"),
     createdAt: nowIso(),
     simulationId: params.simulationId,
     reportId: params.reportId,
-    userFacingSummary:
-      retrieval.evidences.length > 0
-        ? "Contexto explicativo local montado com referências mock/placeholder para demonstrar retrieval e rastreabilidade."
-        : "Nenhuma evidência mock correspondente foi encontrada no índice local placeholder.",
+    userFacingSummary,
     retrieval,
     blocks,
     nextEvolutionNotes: [
-      "Substituir busca por palavras-chave por embeddings locais em Transformers.js.",
-      "Adicionar reranking/geração explicativa com WebLLM consumindo somente evidências recuperadas.",
-      "Persistir índice local versionado no navegador sem backend remoto.",
+      "Persistir índice de embeddings no IndexedDB para evitar recomputação a cada sessão.",
+      "Usar modelo multilingual (paraphrase-multilingual-MiniLM) para melhor cobertura do português jurídico.",
+      "Reranking com WebLLM após embedding retrieval para selecionar trechos mais relevantes.",
     ],
     explicitPlaceholder: true,
   };

@@ -1,8 +1,6 @@
-import { createWorkerPlaceholderMessage } from "@/workers/types";
-
 export function getOcrWorkerBootstrap() {
   return {
-    status: "placeholder",
-    message: createWorkerPlaceholderMessage("ocr-worker"),
+    status: "delegated_to_document_worker",
+    message: "OCR agora é orquestrado pelo worker documental dedicado em workers/document-processor.worker.ts.",
   };
 }

@@ -1,14 +1,17 @@
-export interface WorkerTask<TPayload = unknown> {
+import type { IngestedDocument } from "@/models/documents";
+
+export interface SerializedDocumentFile {
+  name: string;
   type: string;
-  payload: TPayload;
+  lastModified: number;
+  buffer: ArrayBuffer;
 }
 
-export interface WorkerResponse<TResult = unknown> {
-  ok: boolean;
-  result?: TResult;
-  error?: string;
+export interface DocumentProcessorRequest {
+  document: IngestedDocument;
+  file: SerializedDocumentFile;
 }
 
-export function createWorkerPlaceholderMessage(name: string) {
-  return `Worker ${name} ainda não implementado. Este ponto existe para futura execução isolada de tarefas pesadas.`;
+export interface DocumentProcessorApi {
+  processDocument(request: DocumentProcessorRequest): Promise<IngestedDocument>;
 }

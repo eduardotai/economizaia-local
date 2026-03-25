@@ -140,10 +140,23 @@ export interface RuleBundleSource {
   validity?: RuleTemporalValidity;
 }
 
+export interface BundleReviewMetadata {
+  approvalStatus: "prototype" | "pending_review" | "reviewed_internal";
+  reviewedBy: string;
+  reviewedAt?: string;
+}
+
 export interface VersionedRuleBundleContract {
   version: string;
   hash: string;
   updatedAt: string;
+  publishedAt: string;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  approvalStatus: BundleReviewMetadata["approvalStatus"];
+  reviewedBy: string;
+  reviewedAt?: string;
+  supersedes?: string;
 }
 
 export interface RuleBundle extends VersionedRuleBundleContract {
@@ -157,6 +170,8 @@ export interface RuleBundle extends VersionedRuleBundleContract {
   refusalPolicy: string;
   maintainer: string;
   updateAvailableNotice?: string;
+  labels: string[];
+  review: BundleReviewMetadata;
   sources: RuleBundleSource[];
   rules: RuleDefinition[];
 }

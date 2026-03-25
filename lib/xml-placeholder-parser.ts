@@ -22,6 +22,11 @@ const GENERIC_FIELD_CANDIDATES = [
     aliases: ["xNome", "emitente", "supplier", "supplierName", "razaoSocial", "nome"],
     note: "Nome capturado por heurística textual; pode se referir a outra entidade no XML.",
   },
+  {
+    label: "cnpj_emitente" as const,
+    aliases: ["CNPJ", "cnpj", "cnpjEmitente", "cnpjEmit", "cnpjPrestador", "cnpjTomador"],
+    note: "CNPJ extraído do XML. Formato esperado: XX.XXX.XXX/XXXX-XX (14 dígitos). Confirme e formate manualmente se necessário.",
+  },
 ] as const;
 
 export interface XmlPlaceholderField {
@@ -41,7 +46,38 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function extractLeafFields(xmlText: string): XmlPlaceholderField[] {
+function formatCnpj(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 14) return raw;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+function extractLeafFieldsViaDOMParser(xmlText: string): XmlPlaceholderField[] {
+  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+  if (doc.querySelector("parsererror")) return [];
+
+  const fields: XmlPlaceholderField[] = [];
+  const occurrenceCount = new Map<string, number>();
+
+  function traverse(node: Element) {
+    if (node.children.length === 0) {
+      const value = normalizeWhitespace(node.textContent ?? "");
+      if (!value) return;
+      const rawTag = node.tagName;
+      const tagName = rawTag.includes(":") ? rawTag.split(":").pop() ?? rawTag : rawTag;
+      const count = (occurrenceCount.get(tagName) ?? 0) + 1;
+      occurrenceCount.set(tagName, count);
+      fields.push({ path: `${tagName}[${count}]`, tagName, value: value.slice(0, 240) });
+    } else {
+      for (const child of node.children) traverse(child);
+    }
+  }
+
+  traverse(doc.documentElement);
+  return fields;
+}
+
+function extractLeafFieldsViaRegex(xmlText: string): XmlPlaceholderField[] {
   const tagRegex = /<([A-Za-z_:][\w:.-]*)\b[^>]*>([^<]+)<\/\1>/g;
   const fields: XmlPlaceholderField[] = [];
   const occurrenceCount = new Map<string, number>();
@@ -50,23 +86,22 @@ function extractLeafFields(xmlText: string): XmlPlaceholderField[] {
   while ((match = tagRegex.exec(xmlText)) !== null) {
     const [, rawTagName, rawValue] = match;
     const value = normalizeWhitespace(rawValue);
-
-    if (!value) {
-      continue;
-    }
-
+    if (!value) continue;
     const tagName = rawTagName.includes(":") ? rawTagName.split(":").pop() ?? rawTagName : rawTagName;
-    const currentCount = (occurrenceCount.get(tagName) ?? 0) + 1;
-    occurrenceCount.set(tagName, currentCount);
-
-    fields.push({
-      path: `${tagName}[${currentCount}]`,
-      tagName,
-      value: value.slice(0, 240),
-    });
+    const count = (occurrenceCount.get(tagName) ?? 0) + 1;
+    occurrenceCount.set(tagName, count);
+    fields.push({ path: `${tagName}[${count}]`, tagName, value: value.slice(0, 240) });
   }
 
   return fields;
+}
+
+function extractLeafFields(xmlText: string): XmlPlaceholderField[] {
+  if (typeof DOMParser !== "undefined") {
+    const domResult = extractLeafFieldsViaDOMParser(xmlText);
+    if (domResult.length > 0) return domResult;
+  }
+  return extractLeafFieldsViaRegex(xmlText);
 }
 
 function inferXmlEntities(document: IngestedDocument, pageId: string | undefined, fields: XmlPlaceholderField[]): ExtractedEntity[] {
@@ -84,12 +119,13 @@ function inferXmlEntities(document: IngestedDocument, pageId: string | undefined
     }
 
     usedPaths.add(matchedField.path);
+    const value = candidate.label === "cnpj_emitente" ? formatCnpj(matchedField.value) : matchedField.value;
     entities.push({
       id: createId("entity"),
       documentId: document.id,
       pageId,
       label: candidate.label,
-      value: matchedField.value,
+      value,
       confidence: 0.58,
       source: "mock_pipeline",
       note: `${candidate.note} Origem heurística: ${matchedField.path}.`,

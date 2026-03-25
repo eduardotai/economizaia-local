@@ -1,19 +1,26 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { DocumentList } from "@/features/documents/document-list";
 import { DocumentUploadPanel } from "@/features/documents/document-upload-panel";
 import { localDb } from "@/db/local-db";
 import { createDocumentStoredAuditEvents } from "@/lib/local-audit";
 import { saveDocumentSnapshot } from "@/lib/local-snapshots";
-import { confirmManualReview, processDocumentPlaceholder, registerDocumentLocally } from "@/lib/document-pipeline";
+import { processDocumentWithDedicatedWorker } from "@/lib/document-worker-client";
+import {
+  confirmManualReview,
+  confirmManualReviewField,
+  registerDocumentLocally,
+  updateManualReviewField,
+} from "@/lib/document-pipeline";
 import type { IngestedDocument } from "@/models/documents";
 
 export function DocumentIngestionWorkspace() {
   const [documents, setDocuments] = useState<IngestedDocument[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const documentListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void localDb
@@ -24,6 +31,21 @@ export function DocumentIngestionWorkspace() {
       });
   }, []);
 
+  async function syncDocument(documentId: string, updater: (document: IngestedDocument) => IngestedDocument) {
+    const stored = await localDb.getIngestionDocument(documentId);
+    if (!stored) return;
+
+    const nextDocument = updater(stored);
+    await persistDocument(nextDocument);
+
+    setDocuments((current) =>
+      current.map((document) => {
+        if (document.id !== documentId) return document;
+        return nextDocument;
+      }),
+    );
+  }
+
   const summary = useMemo(
     () => ({
       total: documents.length,
@@ -32,6 +54,7 @@ export function DocumentIngestionWorkspace() {
       failed: documents.filter((document) => document.status === "failed").length,
       warnings: documents.reduce((accumulator, document) => accumulator + document.processingWarnings.length, 0),
       extractedFields: documents.reduce((accumulator, document) => accumulator + document.extractedFields.length, 0),
+      confirmedFields: documents.reduce((accumulator, document) => accumulator + document.manualReview.confirmedFieldCount, 0),
     }),
     [documents],
   );
@@ -52,13 +75,14 @@ export function DocumentIngestionWorkspace() {
       const processedDocuments = await Promise.all(
         Array.from(fileList).map(async (file) => {
           const registered = await registerDocumentLocally({ file });
-          const processed = await processDocumentPlaceholder(registered, file);
+          const processed = await processDocumentWithDedicatedWorker(registered, file);
           await persistDocument(processed);
           return processed;
         }),
       );
 
       setDocuments((current) => [...processedDocuments, ...current].sort((left, right) => right.createdAt.localeCompare(left.createdAt)));
+      setTimeout(() => documentListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
     } catch (processingError) {
       const message =
         processingError instanceof Error
@@ -71,45 +95,15 @@ export function DocumentIngestionWorkspace() {
   }
 
   function handleManualReviewChange(documentId: string, fieldId: string, value: string) {
-    setDocuments((current) =>
-      current.map((document) => {
-        if (document.id !== documentId) return document;
+    void syncDocument(documentId, (document) => updateManualReviewField(document, fieldId, value));
+  }
 
-        return {
-          ...document,
-          status: document.status === "manual_review_confirmed" ? "ready_for_manual_review" : document.status,
-          updatedAt: new Date().toISOString(),
-          manualReview: {
-            ...document.manualReview,
-            confirmed: false,
-            reviewedBy: "pendente",
-            reviewedAt: undefined,
-            fields: document.manualReview.fields.map((field) =>
-              field.id === fieldId
-                ? {
-                    ...field,
-                    value,
-                    reviewed: value.trim().length > 0,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : field,
-            ),
-          },
-        };
-      }),
-    );
+  function handleConfirmManualReviewField(documentId: string, fieldId: string) {
+    void syncDocument(documentId, (document) => confirmManualReviewField(document, fieldId));
   }
 
   function handleConfirmManualReview(documentId: string) {
-    setDocuments((current) =>
-      current.map((document) => {
-        if (document.id !== documentId) return document;
-
-        const confirmed = confirmManualReview(document, document.manualReview.fields);
-        void persistDocument(confirmed);
-        return confirmed;
-      }),
-    );
+    void syncDocument(documentId, (document) => confirmManualReview(document));
   }
 
   return (
@@ -120,31 +114,43 @@ export function DocumentIngestionWorkspace() {
         <div className="rounded-[1.75rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm text-amber-50">
           <div className="mb-2 flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4" />
-            Prioridade documental deste checkpoint
+            Guardrails do fluxo documental
           </div>
           <ul className="space-y-1 text-amber-100/90">
             <li>• PDF digital usa pdf.js como caminho prioritário.</li>
-            <li>• OCR/Tesseract não é confiável para cálculo fiscal e fica apenas como fallback técnico.</li>
-            <li>• Revisão/edição manual é obrigatória antes de qualquer uso do documento no rule engine.</li>
-            <li>• Sem confirmação humana, o fluxo deve permanecer explicitamente bloqueado para cálculo.</li>
+            <li>• OCR/Tesseract não é base confiável para cálculo fiscal e fica apenas como fallback técnico.</li>
+            <li>• Revisão e edição manual são obrigatórias antes de qualquer uso do documento no rule engine.</li>
+            <li>• Sem confirmação humana, o fluxo continua explicitamente bloqueado.</li>
           </ul>
+          <div className="mt-4 rounded-2xl border border-amber-300/20 bg-background/30 p-4 text-amber-50">
+            <div className="font-medium">Como demonstrar esta etapa</div>
+            <ol className="mt-2 space-y-1 text-amber-100/90">
+              <li>1. Envie um PDF, imagem ou XML local.</li>
+              <li>2. Revise os campos críticos antes de seguir.</li>
+              <li>3. Confirme a revisão manual para registrar a evidência.</li>
+              <li>4. Volte ao relatório para mostrar o impacto no gate final.</li>
+            </ol>
+          </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-7">
           <SummaryCard label="Documentos" value={String(summary.total)} />
           <SummaryCard label="Rev. pendente" value={String(summary.manualReviewPending)} />
           <SummaryCard label="Rev. ok" value={String(summary.manualReviewDone)} />
           <SummaryCard label="Falhas" value={String(summary.failed)} />
-          <SummaryCard label="Warnings" value={String(summary.warnings)} />
+          <SummaryCard label="Alertas" value={String(summary.warnings)} />
           <SummaryCard label="Campos" value={String(summary.extractedFields)} />
+          <SummaryCard label="Confirmados" value={String(summary.confirmedFields)} />
         </div>
 
         {error ? <div className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
       </div>
 
+      <div ref={documentListRef} />
       <DocumentList
         documents={documents}
         onManualReviewChange={handleManualReviewChange}
+        onConfirmManualReviewField={handleConfirmManualReviewField}
         onConfirmManualReview={handleConfirmManualReview}
       />
     </section>
