@@ -4,6 +4,21 @@
 
 > **Aviso:** os resultados sao estimativas preliminares baseadas em dados declarados e no bundle de regras em revisao. Nao substitui analise de contador habilitado. **Revisao humana e obrigatoria** antes de qualquer uso pratico.
 
+## Conformidade com a LGPD (Lei Geral de Proteção de Dados)
+
+**EconomizaIA Local foi projetado desde o início para máxima conformidade com a LGPD.**
+
+- **Zero coleta de dados pessoais em servidores** — todos os dados (perfil, documentos, simulações, relatórios) permanecem **exclusivamente no dispositivo do usuário** (IndexedDB + localForage).
+- **Processamento 100% local** — PDF/OCR, rule engine, RAG e LLM (WebLLM) rodam no navegador, sem envio para terceiros.
+- **Consentimento explícito e granular** — o usuário deve aceitar explicitamente o processamento local-only antes de usar.
+- **Direito ao esquecimento** — botão "Excluir todos os meus dados" remove permanentemente todas as informações armazenadas localmente.
+- **Transparência total** — Política de Privacidade clara disponível no app e neste README.
+- **Arquitetura auditável** — toda ação deixa trilha local (sem necessidade de log em servidor).
+
+**Base legal principal:** Art. 7º, IX da LGPD (legítimo interesse + consentimento) combinado com o fato de não haver tratamento de dados fora do dispositivo.
+
+**Recomendação:** Mesmo sendo local-first, recomendamos que usuários MEI/microempresas consultem um contador ou advogado especializado em proteção de dados antes de usar em produção real.
+
 ## Stack
 
 | Camada | Tecnologia |
