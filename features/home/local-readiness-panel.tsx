@@ -1,26 +1,33 @@
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { localReadinessChecklist } from "@/models/foundation";
+import { starterRuleBundle } from "@/engine/starter-rule-bundle";
 
 export function LocalReadinessPanel() {
+  const isProduction = starterRuleBundle.bundleStatus === "active";
+
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5 border-green-500/30 bg-green-950/10">
       <div>
-        <CardTitle>Camadas locais já preparadas</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>App em Modo Produção</CardTitle>
+          {isProduction && (
+            <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-medium text-white">
+              v1.0 Ativo
+            </span>
+          )}
+        </div>
         <CardDescription className="mt-2 leading-6">
-          Estrutura inicial para evoluir o produto sem mudar o princípio central: processamento e armazenamento no dispositivo do usuário.
+          {isProduction 
+            ? "Cálculos reais ativados. O motor tributário agora gera estimativas funcionais com base nos seus dados."
+            : "Estrutura local-first pronta para uso real."
+          }
         </CardDescription>
       </div>
 
-      <div className="grid gap-3">
-        {localReadinessChecklist.map((item) => (
-          <div key={item.title} className="rounded-2xl border border-border/70 bg-background/40 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-medium">{item.title}</p>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">{item.status}</span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
-          </div>
-        ))}
+      <div className="rounded-xl border border-green-500/30 bg-background/60 p-4 text-sm">
+        <p className="font-medium text-green-400">✓ Rule Engine v1.0 ativo</p>
+        <p className="mt-1 text-muted-foreground">
+          MEI • Simples Nacional • Lucro Presumido com cálculos determinísticos
+        </p>
       </div>
     </Card>
   );
