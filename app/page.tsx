@@ -6,6 +6,7 @@ import { DocumentIngestionOverview } from "@/features/documents/document-ingesti
 import { DocumentIngestionWorkspace } from "@/features/documents/document-ingestion-workspace";
 import { SimulationWorkspace } from "@/features/simulation/simulation-workspace";
 import { LocalInspectionPanel } from "@/features/inspection/local-inspection-panel";
+import { PrivacySettings } from "@/components/privacy/privacy-settings";
 
 export default function HomePage() {
   return (
@@ -20,6 +21,11 @@ export default function HomePage() {
       <LocalInspectionPanel />
       <DocumentIngestionOverview />
       <DocumentIngestionWorkspace />
+
+      {/* Seção de Privacidade LGPD - visível para todos */}
+      <div className="mt-12">
+        <PrivacySettings />
+      </div>
     </main>
   );
 }
